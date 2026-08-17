@@ -149,17 +149,49 @@ def cmd_manual(args) -> int:
         print(f"no pack or map {target!r}; try ./skate3loader list", file=sys.stderr)
         return 1
 
-    print(f":: staging {pack.name} - {len(pack.maps)} map(s)")
-    print(":: NO automation: no macro, no warp, no loading cover")
-    print(":: navigate the game's own menus. Backtick opens the loader picker.")
-    print(f":: log: {config.FREESKATE_DIR / 'runtime' / 'logs' / 'freeskate.log'}")
-    session = launch.launch(pack, entry, macro="", manual=True,
-                            all_packs=packs, windowed="--windowed" in args)
-    try:
-        return session.process.wait()
-    except KeyboardInterrupt:
+    import time
+
+    windowed = "--windowed" in args
+    launch.clear_request()
+    while True:
+        print(f":: staging {pack.name} - {len(pack.maps)} map(s)")
+        print(":: NO automation: no macro, no warp, no loading cover")
+        print(":: navigate the game's own menus. Backtick opens the loader picker.")
+        print(f":: log: {config.FREESKATE_DIR / 'runtime' / 'logs' / 'freeskate.log'}")
+        session = launch.launch(pack, entry, macro="", manual=True,
+                                all_packs=packs, windowed=windowed)
+
+        # SERVICE THE PICKER. It is on in this mode (and lists the broken maps
+        # deliberately), but nothing here used to read its request file - so a
+        # pick wrote a request, no one answered, and the game just sat there
+        # looking like the picker was broken. Reported from a real session.
+        try:
+            request = None
+            while session.process.poll() is None:
+                request = launch.read_request()
+                if request is not None:
+                    launch.clear_request()
+                    break
+                time.sleep(0.25)
+        except KeyboardInterrupt:
+            session.stop()
+            return 130
+
+        if request is None:
+            return session.process.poll() or 0
+
+        pack_id, sub_index = request
+        nxt = next((p for p in packs if p.id == pack_id), None)
+        entry = next((m for m in (nxt.maps if nxt else [])
+                      if m.sub_index == sub_index), None)
+        if nxt is None or entry is None:
+            print(f":: unknown pick {pack_id}.{sub_index}", file=sys.stderr)
+            session.stop()
+            return 1
+        print(f"\n:: picked {nxt.name} / {entry.name} - relaunching manually")
+        pack = nxt
         session.stop()
-        return 130
+        launch.kill_running_game()
 
 
 def cmd_doctor(_args) -> int:

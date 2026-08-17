@@ -10,8 +10,16 @@ original 37 maps, before the Meebs pack was imported.
 > spread 5 and nearest other map 267 — the same standard as every map below.
 > **The catalog is 41 playable, 13 still stuck.**
 >
+> **Scope, measured afterwards: one of the fourteen was ours, not fourteen.**
+> Olay Holes and The Alley (Meebs) were then driven by hand with no automation
+> and both hang mid-load — Olay Holes for 67 s, The Alley for six minutes, one
+> takeover, renderer free-spinning at ~940 FPS with nothing to draw. Their maps
+> ARE listed and selectable; loading them is what hangs. So most of the list
+> looks genuinely broken, and the value of the two fixes below is that they
+> stopped the list being unfalsifiable — not that they refuted it wholesale.
+>
 > It was found by booting the pack with no automation at all and walking the
-> menus by hand. Two faults in our own tooling had manufactured the list:
+> menus by hand. Two faults in our own tooling had hidden it:
 >
 > 1. **The boot warp loads worlds without rendering them** — the same
 >    zero-draw-record failure as the unsolved direct warp (`records=0 views=0`).

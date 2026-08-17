@@ -243,5 +243,15 @@ def macro_for(pack, entry) -> str:
     # item patch never runs either. Nothing selected the map, all six confirmed
     # sub-list index 0, and the sweep duly reported COLLIDES=6: every map
     # landing in Auburn.
-    item_patch_selects = pack.warp_safe and not pack.spots_share_world
+    #
+    # And it has to respect a pack that has TURNED THE WARP OFF in its settings.
+    # `warp_safe` is derived from spawn nodes and knows nothing about that, so a
+    # warp-off pack still looked like "the item patch will handle it" and the
+    # row walk was skipped - leaving nothing at all to select the map. Sleepen's
+    # five maps all came out with an identical macro that way.
+    item_patch_selects = (
+        pack.warp_safe
+        and not pack.spots_share_world
+        and (pack.settings or {}).get("skate3_warp_substitute_item") is not False
+    )
     return build_macro(entry.sub_index, row_patch=item_patch_selects)
