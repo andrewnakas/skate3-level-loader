@@ -97,6 +97,15 @@ Cards are labelled from real test runs, not guesswork:
 Some community packs simply don't load in this build. They're labelled so you
 don't click into a hang. Current catalog: **40 of 54 maps playable.**
 
+All 40 were verified together on 2026-08-17 — 120 runs, every map reproducible
+across its runs and distinct from every other, zero failures. Both thresholds
+cleared by more than 20x. See [Reliability](docs/reliability.md) for the numbers,
+the two flakes that turned up, and the retry rules they produced.
+
+If a boot flakes, the launcher retries it once behind the loading screen rather
+than showing you an error — but only for maps already proven to load, so a
+known-broken one still fails fast.
+
 ---
 
 ## Verifying maps yourself
@@ -108,10 +117,16 @@ really did. The only ground truth is a screenshot.
 ```bash
 python3 scripts/verifyspot.py <world-id>            # boot one map, photograph it
 python3 scripts/verifyspot.py <pack-id>:<index>     # when a world id is ambiguous
+python3 scripts/sweep.py --status boots             # the 40 that should work (~2.2h)
 python3 scripts/sweep.py                            # every map, 3 runs, contact sheet
 python3 scripts/sweep.py --only skate-it.13 --runs 3
 python3 scripts/sweep.py --report                   # re-judge existing shots, boots nothing
 ```
+
+`--status boots` is the regression gate: it covers exactly the maps recorded as
+working, and exits 0 only if every one was reproducible and distinct. A map
+recorded as `stalls` scores `EXPECTED FAIL` instead of failing the run, so
+keeping a broken pack imported doesn't make the suite permanently red.
 
 `sweep.py` writes `work/sweep/sweep.md`, `sweep.json` and a labelled
 `contact.png`. It judges three ways:
@@ -127,6 +142,18 @@ cp work/sweep/<pack>.<index>__s1.png references/<pack>.<index>.png
 ```
 
 Exit codes: `0` match, `2` nothing rendered, `3` wrong place, `4` no reference.
+
+### Offline tests
+
+These need no game and run in seconds:
+
+```bash
+python3 scripts/classifier_test.py       # the retry rule, against every real log
+python3 scripts/gui_failure_test.py      # the launcher's retry and failure paths
+python3 scripts/display_test.py          # the capture guard writes what it claims
+python3 scripts/switch_request_test.py   # the in-game picker's relaunch request
+python3 scripts/sweep_merge_test.py      # a --only re-run keeps the other results
+```
 
 ---
 

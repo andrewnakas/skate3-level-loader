@@ -93,6 +93,67 @@ RE_WORLD_DIR = re.compile(
 # The pause challenge-map screen; reaching it means the macro is navigating.
 SCREEN_CHALLENGE_MAP = "17"
 
+# A world was drawn at some point in this run. NOT proof the RIGHT world was
+# drawn -- see `spotcheck` for why only a screenshot can answer that -- but it
+# does prove the engine booted far enough to render, which is all
+# `transient_boot_failure` needs to know.
+RE_TAKEOVER = re.compile(r"taking over natively")
+RE_FATAL = re.compile(r"\[FATAL\]")
+
+
+def transient_boot_failure(log_text: str) -> str | None:
+    """Why a boot failed in a way that says nothing about the MAP itself.
+
+    Returns None when the failure is the map's fault (or is unclassifiable), and
+    a short reason when it is worth simply trying again.
+
+    What counts is a takeover AFTER the macro finished, not a takeover at all.
+    The boot warp draws a world on its way to the menu, so nearly every run logs
+    one before anything has been selected; only a takeover following
+    `gameplay input sequence complete` means the world the user asked for came
+    up. Measured over 141 real run logs:
+
+        boots  maps   118 of 122 logs have a post-macro takeover
+        stalls maps     0 of  19
+
+    The four exceptions are the whole reason for the second branch. Three are
+    Danny Way, which boots straight into its own world and so gets NO macro -
+    there is no sequence-complete line to be after, and its single takeover is
+    the real one. The fourth was a genuine Maloof flake, on a map whose other
+    two runs in the same session matched their reference at distance 4 and 8.
+
+    An earlier version of this asked only "is there a takeover anywhere", which
+    scored that Maloof run as the map's own fault and declined to retry it.
+
+    Three flavours turn up, none of which says anything about where the map goes:
+
+      4.3 s    `[FATAL] Call to invalid or unregistered function at guest
+               address 0x00000000` - a null indirect call during boot, the known
+               intermittent heap corruption in this title.
+      160.6 s  reached press-start, enabled the auto-tap, and then sat there. No
+               `gameplay reached`, no inputs injected, frontend never left
+               screen 0.
+      ~40 s    the macro ran to completion and the world never followed.
+
+    A map that is genuinely broken looks identical, so callers must not retry
+    forever on the strength of this alone. `sweep` bounds it with a retry count
+    and skips maps recorded as `stalls`; `session` additionally requires the map
+    to be one already proven to boot.
+    """
+    takeovers = [m.start() for m in RE_TAKEOVER.finditer(log_text)]
+    if not takeovers:
+        if RE_FATAL.search(log_text):
+            return "the engine crashed during boot"
+        return "the game never reached gameplay"
+    finished = [m.start() for m in RE_SEQUENCE_DONE.finditer(log_text)]
+    if not finished:
+        # No macro ran at all, so there is no "after" to look for and the one
+        # takeover on record is the map's own. This is Danny Way's path.
+        return None
+    if takeovers[-1] > finished[-1]:
+        return None
+    return "the map never finished loading"
+
 
 def _normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())

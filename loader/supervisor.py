@@ -30,6 +30,10 @@ class Report:
 class Supervisor:
     """Runs sessions back to back until the game exits without a request."""
 
+    # A boot that never rendered gets one more go. Same policy as the GUI's
+    # `SessionController`; see `logwatch.transient_boot_failure`.
+    MAX_ATTEMPTS = 2
+
     def __init__(self, boot_timeout: float = 260.0, on_event=None):
         self.boot_timeout = boot_timeout
         self.on_event = on_event or (lambda message: None)
@@ -37,6 +41,21 @@ class Supervisor:
 
     def _packs(self) -> list[Pack]:
         return catalog.load_all(config.CATALOG_DIR)
+
+    def _retry_reason(self, session, target: MapEntry, attempt: int) -> str | None:
+        """Whether this dead session is worth simply starting over.
+
+        Gated on `status == "boots"` for the same reason the GUI is: "nothing
+        rendered" is equally true of a map that is merely broken, and those have
+        already cost a full `boot_timeout`.
+        """
+        if attempt >= self.MAX_ATTEMPTS or target.status != "boots":
+            return None
+        try:
+            text = Path(session.log_file).read_text(errors="replace")
+        except OSError:
+            return None
+        return logwatch.transient_boot_failure(text) if text else None
 
     def run(
         self,
@@ -47,9 +66,11 @@ class Supervisor:
     ) -> int:
         """Play `entry`, then keep serving relaunch requests until the game quits."""
         launch.clear_request()
+        attempt = 0
         while True:
             packs = self._packs()
             target = entry or pack.maps[0]
+            attempt += 1
             if open_picker:
                 self.on_event(f"starting at the map picker ({pack.name} staged)")
             else:
@@ -72,6 +93,13 @@ class Supervisor:
 
             request = self._watch(session, watcher, pack, target, awaiting_pick=open_picker)
             if request is None:
+                if not watcher.status.arrived:
+                    reason = self._retry_reason(session, target, attempt)
+                    if reason:
+                        self.on_event(f"{reason} - retrying {target.name}")
+                        session.stop()
+                        launch.kill_running_game()
+                        continue
                 return session.process.poll() or 0
 
             pack_id, sub_index = request
@@ -89,6 +117,9 @@ class Supervisor:
             session.stop()
             launch.kill_running_game()
             pack, entry = next_pack, next_entry
+            # A new map gets its own attempt budget; the count above is per map,
+            # not per session.
+            attempt = 0
             # After the first hop the picker should not reopen; we are aiming at
             # a specific map.
             open_picker = False

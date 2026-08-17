@@ -62,6 +62,24 @@ def run() -> tuple[bool, list[str]]:
                "" if xex.is_file() else "set SKATE3LOADER_INSTALL")
     )
 
+    # Screen locking, which is invisible until it has already ruined a run: a
+    # locked session makes every window capture come back pure black while the
+    # capture succeeds and the logs stay healthy. Only reported, not changed -
+    # `display.ensure_capturable()` does that at the start of a sweep.
+    from . import display
+
+    idle = display._value_of(
+        subprocess.run(["gsettings", "get", "org.gnome.desktop.session", "idle-delay"],
+                       capture_output=True, text=True).stdout)
+    results.append(
+        _check(
+            f"screen will not blank during a long run (idle-delay {idle or '?'})",
+            idle == "0",
+            "" if idle == "0" else
+            "captures go BLACK once the session locks; sweeps disable this themselves",
+        )
+    )
+
     # Nothing else holding the game's resources.
     running = subprocess.run(["pgrep", "-x", "skate3"], capture_output=True).returncode == 0
     results.append(

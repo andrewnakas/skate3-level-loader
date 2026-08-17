@@ -12,6 +12,7 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
+from pathlib import Path
 
 from gi.repository import GLib
 
@@ -50,7 +51,7 @@ class Callbacks:
     on_ready: object = None  # ()
     on_finished: object = None  # (exit_code)
     on_failed: object = None  # (message)
-    on_retry: object = None  # (attempt, reason)
+    on_retry: object = None  # (attempt, reason) - reason is a phrase, not a world
 
 
 class SessionController:
@@ -191,7 +192,7 @@ class SessionController:
             waited = time.monotonic() - self._boot_started
             if waited > BOOT_TIMEOUT_SECONDS:
                 name = self.entry.name if self.entry else "that map"
-                self._fail(
+                self._retry_or_fail(
                     f"{name} did not load within {BOOT_TIMEOUT_SECONDS:.0f} seconds. "
                     "Some community packs never reach gameplay in this build - the "
                     "library marks the ones already known to fail as WON'T LOAD."
@@ -213,7 +214,7 @@ class SessionController:
                 return False
 
             if exited is not None:
-                self._fail(
+                self._retry_or_fail(
                     f"the game exited during loading (code {exited}) before reaching "
                     f"{self.entry.name}"
                 )
@@ -223,12 +224,7 @@ class SessionController:
             # loading screen so a miss costs time rather than being visible.
             wrong = self.watcher.wrong_world
             if wrong and self._attempt < self.MAX_ATTEMPTS:
-                self._emit("on_retry", self._attempt, wrong)
-                self.session.stop()
-                self.session = None
-                self.watcher = None
-                self._cancel_tick()
-                self._launch(self._windowed)
+                self._relaunch(f"landed on {wrong}")
                 return False
 
             if status.arrived and self._in_gameplay():
@@ -318,6 +314,57 @@ class SessionController:
         self._attempt = 0
         self._launch(windowed)
         return True
+
+    def _retry_or_fail(self, message: str) -> None:
+        """Try again if this boot failed in a way that is not the map's fault.
+
+        The sweep harness has always retried a run that never rendered, and it
+        recovers a boot that way somewhere between 1 run in 333 (measured on an
+        idle machine) and 1 in 60 (measured 2026-08-17 under load). The GUI did
+        not, so exactly the same engine flake that the harness shrugs off
+        surfaced to the user as an error dialog - the launcher was measurably
+        less reliable than its own test rig. Both now apply
+        `logwatch.transient_boot_failure`.
+
+        The extra gate here is `status == "boots"`. A transient reason means
+        "nothing rendered", which is also true of every map that is simply
+        broken, and those already cost a 200 s timeout - doubling that to 400 s
+        before the user gets an explanation would be worse than the bug. So only
+        a map with a run behind it proving it CAN load earns a second attempt.
+        """
+        reason = None
+        if self.session is not None and self.entry is not None \
+                and self._attempt < self.MAX_ATTEMPTS \
+                and self.entry.status == "boots":
+            try:
+                text = Path(self.session.log_file).read_text(errors="replace")
+            except OSError:
+                text = ""
+            reason = logwatch.transient_boot_failure(text) if text else None
+
+        if reason is None:
+            self._fail(message)
+            return
+        self._relaunch(reason)
+
+    def _relaunch(self, reason: str) -> None:
+        """Start this map over behind the same loading screen.
+
+        The one place that relaunches. Deliberately does NOT bump `_generation`
+        - that marks a session as abandoned, and this one is being continued.
+        `_launch` resets the boot deadline, so the new attempt gets a full
+        window rather than the remains of the old one's.
+        """
+        self._emit("on_retry", self._attempt, reason)
+        if self.session:
+            self.session.stop()
+        # Clears the leaked 4.5 GiB /dev/shm segment too, which would otherwise
+        # hang the very next startup.
+        launch.kill_running_game()
+        self.session = None
+        self.watcher = None
+        self._cancel_tick()
+        self._launch(self._windowed)
 
     def _fail(self, message: str) -> None:
         self._generation += 1

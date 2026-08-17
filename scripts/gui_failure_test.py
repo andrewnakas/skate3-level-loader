@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""One failed launch must not brick the library. Needs no game.
+"""What the launcher does when a launch goes wrong. Needs no game.
 
-`SessionController._fail` puts the controller in `Phase.FAILED`, and `app.play`
-refuses to start unless the phase is `IDLE`. Nothing used to move it back, so
-after any failure every click on every map card did nothing at all - the window
-still up, the cards still highlighting, and no way to tell from the UI that the
-launcher was dead. `app._on_failed` now calls `controller.stop()`.
+Two things, both of which were once broken in ways invisible from the UI:
 
-`gui_e2e.py` cannot catch this: its own `on_failed` quits the app immediately,
+**One failed launch must not brick the library.** `SessionController._fail` puts
+the controller in `Phase.FAILED`, and `app.play` refuses to start unless the
+phase is `IDLE`. Nothing used to move it back, so after any failure every click
+on every map card did nothing at all - the window still up, the cards still
+highlighting, and no way to tell the launcher was dead. `app._on_failed` now
+calls `controller.stop()`.
+
+**A boot that never rendered must be retried.** The sweep harness always did;
+the GUI did not, so the same engine flake the harness absorbed reached the user
+as an error dialog. See `retry_checks` below.
+
+`gui_e2e.py` cannot catch either: its own `on_failed` quits the app immediately,
 so it never gets to try a second launch.
 
     python3 scripts/gui_failure_test.py
@@ -23,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import gi  # noqa: E402
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib  # noqa: E402
+from gi.repository import Gio, GLib  # noqa: E402
 
 from loader import app as loader_app  # noqa: E402
 from loader import catalog, config, session  # noqa: E402
@@ -38,6 +45,13 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 
 def main() -> int:
     app = loader_app.LoaderApp()
+    # MUST be non-unique. `Gtk.Application` is single-instance by application
+    # id, so with the real launcher open this process handed its command line to
+    # THAT instance, activated the user's library window, ran not one check, and
+    # exited 0 - a silent false pass, and the one failure mode a test must never
+    # have. `switch_request_test.py` dodges it by avoiding GTK altogether; this
+    # one cannot, because the wiring under test is the app's.
+    app.set_flags(app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)
 
     def start(_app):
         controller = app.controller
@@ -85,6 +99,16 @@ def main() -> int:
         check("no real process was ever killed", len(killed) > 0,
               f"{len(killed)} stubbed kill(s) - none reached pkill")
 
+        # The retry cases below synthesize failures with no matching `play()`,
+        # so `_on_failed`'s `release()` would outnumber `hold()` and GLib would
+        # log `use_count > 0` criticals. The real flow is balanced - one play
+        # holds, exactly one of finished/failed releases, and a retry does
+        # neither - so neutralize the counter rather than let noise into a
+        # passing run.
+        app.hold, app.release = (lambda: None), (lambda: None)
+
+        retry_checks(controller, launched, errors)
+
         controller.stop()
         app.quit()
 
@@ -99,6 +123,109 @@ def main() -> int:
         return 2
     print(f"{len(results) - len(failed)}/{len(results)} checks passed")
     return 1 if failed else 0
+
+
+def retry_checks(controller, launched, errors) -> None:
+    """A boot that never rendered must be retried, but only when it can work.
+
+    The sweep harness has always retried these; the GUI did not, so the same
+    ~1-in-333 engine flake that the harness silently absorbed reached the user
+    as an error dialog. The two gates that keep the retry bounded are what these
+    checks are really about: the attempt count, and `status == "boots"`.
+    """
+    import tempfile
+
+    from loader.catalog import MapEntry
+
+    CRASHED = "[FATAL] Call to invalid or unregistered function\n"
+    # A real macro-driven run: the boot warp's takeover, the macro finishing,
+    # then the takeover that is the requested world actually coming up. The
+    # last one is what makes this NOT a transient failure.
+    RENDERED = (
+        "native-scene: taking over natively (746 items)\n"
+        "Skate 3 demo path: gameplay input sequence complete\n"
+        "native-scene: taking over natively (1093 items)\n"
+    )
+    # The same run without that final takeover: the macro ran and the world
+    # never followed. Indistinguishable from a broken map in the log, which is
+    # why only a map already proven to boot is retried on it.
+    NO_WORLD = (
+        "native-scene: taking over natively (746 items)\n"
+        "Skate 3 demo path: gameplay input sequence complete\n"
+    )
+
+    directory = Path(tempfile.mkdtemp(prefix="skate3loader-test-"))
+
+    class FakeSession:
+        def __init__(self, text: str):
+            self.log_file = directory / "run.log"
+            self.log_file.write_text(text)
+
+        def stop(self):
+            pass
+
+    def attempt_failure(log_text: str, status: str, attempt: int) -> tuple[int, int]:
+        """Drive one LOADING-phase failure. Returns (relaunches, errors) it caused."""
+        controller.phase = session.Phase.LOADING
+        controller.entry = MapEntry(world_id="w", name="Test Map", status=status)
+        controller.session = FakeSession(log_text)
+        controller._attempt = attempt
+        before = (len(launched), len(errors))
+        controller._retry_or_fail("simulated boot failure")
+        return len(launched) - before[0], len(errors) - before[1]
+
+    relaunched, failed = attempt_failure(CRASHED, "boots", 1)
+    check("a working map retries after an engine crash",
+          relaunched == 1 and failed == 0,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure("BootFlow ShowPressStartMode\n", "boots", 1)
+    check("a working map retries after a silent stall",
+          relaunched == 1 and failed == 0,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(CRASHED, "boots", session.SessionController.MAX_ATTEMPTS)
+    check("the retry is bounded - the last attempt fails",
+          relaunched == 0 and failed == 1,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(CRASHED, "stalls", 1)
+    check("a known-broken map fails at once, with no second 200 s wait",
+          relaunched == 0 and failed == 1,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(RENDERED, "boots", 1)
+    check("a failure after the world came up is the map's, and is not retried",
+          relaunched == 0 and failed == 1,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(NO_WORLD, "boots", 1)
+    check("the macro finishing with no world is retried",
+          relaunched == 1 and failed == 0,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(NO_WORLD, "stalls", 1)
+    check("the same log on a known-broken map is not retried",
+          relaunched == 0 and failed == 1,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    relaunched, failed = attempt_failure(CRASHED, "", 1)
+    check("an untested map is not retried either",
+          relaunched == 0 and failed == 1,
+          f"{relaunched} relaunch(es), {failed} error(s)")
+
+    # A retry continues the session, so it must NOT bump the generation - that
+    # is the marker `_on_launched` reads to throw away an abandoned launch, and
+    # bumping it here would make every retry stage a game and then discard it.
+    controller.phase = session.Phase.LOADING
+    controller.entry = MapEntry(world_id="w", name="Test Map", status="boots")
+    controller.session = FakeSession(CRASHED)
+    controller._attempt = 1
+    generation = controller._generation
+    controller._retry_or_fail("simulated boot failure")
+    check("a retry does not abandon the session",
+          controller._generation == generation,
+          f"generation moved {generation} -> {controller._generation}")
 
 
 if __name__ == "__main__":

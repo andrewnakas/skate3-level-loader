@@ -16,10 +16,17 @@ wrong thing. Together they are enough to call the loader correct before a single
 reference exists - and the contact sheet then turns one human pass into 37
 references, after which MATCH carries it.
 
+    python3 scripts/sweep.py --status boots      the maps that should work
     python3 scripts/sweep.py                     every map, 3 runs each
     python3 scripts/sweep.py --pack skate-it     one pack
     python3 scripts/sweep.py --runs 1 --limit 4  a quick shakedown
     python3 scripts/sweep.py --report            re-judge existing shots only
+
+`--status boots` is the regression gate: it covers exactly the maps recorded as
+working and exits 0 only if every one of them was reproducible and distinct. A
+map recorded as `stalls` is EXPECTED to render nothing, so it scores
+EXPECTED FAIL rather than dragging the run to a failure - without that the exit
+code could never be 0 while a single broken pack stayed imported.
 
 Run ONE of these at a time. Each run kills any live game, so two sweeps at once
 silently truncate each other's runs.
@@ -39,7 +46,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from loader import catalog, config, display, launch, navigate, spotcheck  # noqa: E402
+from loader import catalog, config, display, launch, logwatch, navigate, spotcheck  # noqa: E402
 from loader.fingerprint import distance, signature  # noqa: E402
 
 import verifyspot  # noqa: E402
@@ -48,12 +55,16 @@ OUT = config.SWEEP_DIR
 
 
 def targets(packs, only_pack: str | None, limit: int | None,
-            only_keys: set[str] | None = None):
+            only_keys: set[str] | None = None, status: str | None = None):
     """The (pack, entry) pairs to sweep.
 
     `only_keys` re-runs a named handful - `<pack>.<index>`, the same key the
     references and the results table use. Re-verifying one fix should not cost
     a two-hour full sweep.
+
+    `status` narrows to one catalog status. `--status boots` is the one that
+    matters: it sweeps the maps that are supposed to work and skips the 14 that
+    are known broken, which is ~40 minutes of guaranteed failures per run.
     """
     out = []
     for pack in packs:
@@ -63,8 +74,21 @@ def targets(packs, only_pack: str | None, limit: int | None,
             if only_keys and spotcheck.reference_key(pack.id, entry.sub_index) \
                     not in only_keys:
                 continue
+            if status and entry.status != status:
+                continue
             out.append((pack, entry))
     return out[:limit] if limit else out
+
+
+def status_by_key(packs) -> dict[str, str]:
+    """Every map's catalog status, keyed the way the results table is.
+
+    Read fresh rather than taken from the stored row: a map's status changes
+    when a sweep proves something about it, and a merged result set can carry
+    rows measured before that.
+    """
+    return {spotcheck.reference_key(pack.id, entry.sub_index): entry.status
+            for pack, entry in targets(packs, None, None)}
 
 
 def one_run(pack, entry, run: int, hold: float, timeout: float,
@@ -108,23 +132,26 @@ def one_run(pack, entry, run: int, hold: float, timeout: float,
                 or line.startswith(":: CHALLENGE") or line.startswith(":: never"):
             note = line.split("  ", 1)[-1].strip()
     # A run where NOTHING EVER RENDERED is a boot failure, not a verdict about
-    # the map, so retry it once. Two distinct flavours were seen in ~220 runs,
-    # and neither says anything about where the map goes:
+    # the map, so retry it once. `logwatch.transient_boot_failure` holds the
+    # rule and the evidence behind it; the launcher applies the same one, so a
+    # flake the harness shrugs off is a flake the user never sees either.
     #
-    #   4.3 s   "[FATAL] Call to invalid or unregistered function at guest
-    #           address 0x00000000" - a null indirect call during boot, the
-    #           known intermittent corruption in this title.
-    #   160.6 s reached press-start, enabled the auto-tap, and then sat there.
-    #           No "gameplay reached", no inputs injected, frontend never left
-    #           screen 0. Maloof, whose other two runs MATCHed the same session.
-    #
-    # Both show up as "no takeover in the log at all", which a map that renders
-    # the wrong world does not. A genuinely broken map just fails twice.
-    if retries > 0 and result.returncode == 2:
+    # Not for a map the catalog already knows is broken: those never render by
+    # definition, and retrying each one costs another full timeout for nothing.
+    if retries > 0 and result.returncode == 2 and entry.status != "stalls":
         log = config.SPOTS_DIR / f"{label}__{key}.log"
         text = log.read_text(errors="replace") if log.exists() else ""
-        if text and "taking over natively" not in text:
-            why = "engine crashed" if "[FATAL]" in text else "never reached gameplay"
+        why = logwatch.transient_boot_failure(text) if text else None
+        if why is None and not run_frames(key, run):
+            # The world came up and the harness STILL got no picture, so there
+            # is no evidence either way - a measurement failure, not a verdict
+            # about the map. Seen on san-vanelona.5: verifyspot saw the
+            # post-macro takeover, held its 6 s, and then captured 0 of 4
+            # frames, the game having stopped logging 5.4 s earlier after
+            # dumping ~940 mesh warnings in under a second (the pre-existing
+            # engine hang, which no crash handler ever sees).
+            why = "rendered but captured no frames"
+        if why:
             print(f"      ({why} after {got_seconds:.0f}s - retrying)")
             launch.kill_running_game(timeout=30)
             subprocess.run("rm -f /dev/shm/xenia_memory_*", shell=True)
@@ -217,8 +244,19 @@ def judge(rows: list[dict]) -> list[dict]:
     return rows
 
 
+# Verdicts that mean something went wrong that was not expected to. Everything
+# else - including a known-broken map failing exactly as recorded - is a pass.
+BAD_VERDICTS = {"NO SHOT", "FLAKY", "COLLIDES", "WRONG"}
+
+
 def verdict_of(row: dict) -> str:
     """The map's verdict.
+
+    A map the catalog records as `stalls` is EXPECTED to render nothing, so it
+    must not drag the whole sweep to a failure - without this the exit code
+    could never be 0 while a single broken pack stayed imported, which made it
+    useless as a regression gate. The opposite case gets a verdict of its own:
+    a `stalls` map that DOES render is not a failure, it is news.
 
     Deliberately does NOT use the challenge-HUD flag. That detector looks for
     glyph-like white in the lower-left, and this sweep showed it firing on
@@ -228,8 +266,11 @@ def verdict_of(row: dict) -> str:
     judged on reproducibility, distinctness and reference match - all of which
     a real challenge landing would also fail, since it teleports you elsewhere.
     """
+    known_bad = row.get("status") == "stalls"
     if not row["shots"]:
-        return "NO SHOT"
+        return "EXPECTED FAIL" if known_bad else "NO SHOT"
+    if known_bad:
+        return "RECOVERED?"
     if row.get("reproducible") is False:
         return "FLAKY"
     if row.get("distinct") is False:
@@ -275,18 +316,40 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=150)
     parser.add_argument("--report", action="store_true",
                         help="re-judge the shots already on disk, boot nothing")
+    parser.add_argument("--status", default=None,
+                        help="only maps with this catalog status "
+                             "(`boots` sweeps the 40 that are supposed to work)")
     args = parser.parse_args()
 
     if not args.report:
         display.ensure_capturable()
     packs = catalog.load_all(config.CATALOG_DIR)
+    statuses = status_by_key(packs)
     only = ({k.strip() for k in args.only.split(',')} if args.only else None)
-    todo = targets(packs, args.pack, args.limit, only)
+    todo = targets(packs, args.pack, args.limit, only, args.status)
     if only and not todo:
         print(f'no maps match --only {sorted(only)}', file=sys.stderr)
         return 1
+    if args.status and not todo:
+        print(f'no maps have status {args.status!r}', file=sys.stderr)
+        return 1
     OUT.mkdir(parents=True, exist_ok=True)
     results_path = OUT / "sweep.json"
+
+    # Read what was already measured BEFORE the run loop starts.
+    #
+    # The loop checkpoints sweep.json after every map, so reading this file
+    # afterwards reads back what THIS run just wrote - the merge below then has
+    # nothing older to merge with and quietly throws the rest away. That is the
+    # bug the merge was added to prevent, and it never worked: a 40-map result
+    # set was reduced to the 2 maps a `--only` re-run had touched, with a
+    # 2-row table printed as if it were the whole answer.
+    previous: list[dict] = []
+    if not args.report and results_path.exists():
+        try:
+            previous = json.loads(results_path.read_text())["maps"]
+        except (OSError, ValueError, KeyError):
+            previous = []
 
     if args.report:
         rows = json.loads(results_path.read_text())["maps"]
@@ -298,7 +361,7 @@ def main() -> int:
             key = spotcheck.reference_key(pack.id, entry.sub_index)
             row = {"key": key, "pack": pack.id, "name": entry.name,
                    "world": entry.world_id, "sub_index": entry.sub_index,
-                   "runs": []}
+                   "status": entry.status, "runs": []}
             for run in range(1, args.runs + 1):
                 # Never inherit a wedged process or a leaked 4.5 GiB segment
                 # from the previous run; either one hangs the next startup.
@@ -313,18 +376,24 @@ def main() -> int:
             results_path.write_text(json.dumps({"maps": judge(rows)}, indent=2))
 
     # MERGE into whatever was already measured, rather than replacing it. A
-    # `--only` re-run is a fix being re-verified, not a new sweep, and twice it
-    # silently reduced a full 37-map result set to the one map it re-ran.
-    if not args.report and results_path.exists():
-        try:
-            previous = json.loads(results_path.read_text())["maps"]
-        except (OSError, ValueError, KeyError):
-            previous = []
+    # `--only` re-run is a fix being re-verified, not a new sweep, and three
+    # times now it silently reduced a full result set to the maps it re-ran.
+    if not args.report and previous:
         fresh = {r["key"] for r in rows}
         rows = [r for r in previous if r["key"] not in fresh] + rows
+        # UNFILTERED on purpose. Threading `args.status` in here would leave
+        # every filtered-out row without a sort key, and `1 << 30` would dump
+        # them all at the end of the table in arbitrary order.
         order = {spotcheck.reference_key(p.id, e.sub_index): i
                  for i, (p, e) in enumerate(targets(packs, None, None))}
         rows.sort(key=lambda r: order.get(r["key"], 1 << 30))
+
+    # Stamp the CURRENT status on every row, including ones merged in from an
+    # earlier sweep or reloaded by --report. A map's status is the thing the
+    # verdict is measured against, so it has to come from the catalog as it is
+    # now, not from whatever it was when the row was written.
+    for row in rows:
+        row["status"] = statuses.get(row["key"], row.get("status", ""))
 
     rows = judge(rows)
     results_path.write_text(json.dumps({"maps": rows}, indent=2))
@@ -350,7 +419,18 @@ def main() -> int:
     contact_sheet(rows, OUT / "contact.png")
     print(f":: contact sheet {OUT / 'contact.png'}")
     print(f":: table         {OUT / 'sweep.md'}")
-    return 0 if tally.get("MATCH", 0) + tally.get("OK*", 0) == len(rows) else 1
+
+    # Only UNEXPECTED outcomes fail the run, so this is usable as a gate: a
+    # known-broken map failing the way it is recorded as failing is a pass.
+    # `RECOVERED?` is not a failure either - it means a map got better - but it
+    # does want a human to look, so say so out loud.
+    recovered = [r["key"] for r in rows if verdict_of(r) == "RECOVERED?"]
+    if recovered:
+        print(f":: {len(recovered)} map(s) marked `stalls` RENDERED this time: "
+              f"{', '.join(recovered)}\n   Check the contact sheet; if they are "
+              f"real, clear their status in catalog/.")
+    bad = sum(count for verdict, count in tally.items() if verdict in BAD_VERDICTS)
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

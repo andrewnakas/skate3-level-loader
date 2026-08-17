@@ -78,8 +78,29 @@ def _all_sessions() -> list[str]:
     return out
 
 
+def _value_of(raw: str) -> str:
+    """The value out of a `gsettings get`, without its type annotation.
+
+    `gsettings get` prints integers as `uint32 3600`, booleans as bare `false`.
+    """
+    text = raw.strip()
+    for prefix in ("uint32 ", "uint64 ", "int32 ", "int64 "):
+        if text.startswith(prefix):
+            return text[len(prefix):].strip()
+    return text
+
+
 def disable_idle_blanking() -> list[str]:
-    """Stop the session locking again. Returns what was changed."""
+    """Stop the session locking again. Returns what was changed.
+
+    The comparison has to be EXACT. It used to be `wanted not in current` - a
+    substring test - and "0" is a substring of "uint32 3600", so a machine with
+    the GNOME default of one hour read as already-disabled and nothing was
+    written. Both timeouts silently stayed at 3600 while this function reported
+    success, which is the worst possible outcome: it puts the lock back exactly
+    60 minutes into an unattended sweep, and from there every capture is pure
+    black while the logs stay perfectly healthy. Caught with a sweep in flight.
+    """
     changed = []
     for schema, key, value in (
         ("org.gnome.desktop.session", "idle-delay", "0"),
@@ -88,10 +109,9 @@ def disable_idle_blanking() -> list[str]:
          "sleep-inactive-ac-timeout", "0"),
     ):
         current = _run("gsettings", "get", schema, key)
-        wanted = value if key != "idle-activation-enabled" else "false"
-        if current and wanted not in current:
+        if current and _value_of(current) != value:
             _run("gsettings", "set", schema, key, value)
-            changed.append(f"{key}: {current} -> {value}")
+            changed.append(f"{key}: {_value_of(current)} -> {value}")
     return changed
 
 

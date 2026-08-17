@@ -105,8 +105,10 @@ class LoaderApp(Gtk.Application):
     def _on_progress(self, fraction: float, detail: str) -> None:
         self.loading.update(fraction, detail)
 
-    def _on_retry(self, attempt: int, wrong_world: str) -> None:
-        self.loading.update(0.05, f"landed on {wrong_world} - retrying")
+    def _on_retry(self, attempt: int, reason: str) -> None:
+        # Stays on the loading screen rather than raising an error dialog: a
+        # recovered flake should cost the user time, not an explanation.
+        self.loading.update(0.05, f"{reason} - retrying")
 
     def _on_ready(self) -> None:
         self.loading.update(1.0, "ready")
