@@ -287,9 +287,20 @@ def launch(
     settle_ms: int = DEFAULT_SETTLE_MS,
     delay_ms: int = 260,
     open_picker: bool = False,
+    manual: bool = False,
     extra_cvars: dict[str, str] | None = None,
 ) -> Session:
-    """Stage the pack, then spawn the game aimed at one map."""
+    """Stage the pack, then spawn the game aimed at one map.
+
+    `manual` stages the DLC and then gets out of the way: no macro, no warp, no
+    loading cover. You navigate the game's own menus yourself.
+
+    It exists as a diagnostic. Every hypothesis killed so far about the maps
+    that never load was tested with this automation still driving, so "the
+    loader breaks these maps" and "these maps are broken" have never been told
+    apart. Manual mode is the control: if a pack reaches its world by hand, the
+    fault is here; if it does not, it is not.
+    """
     binary = Path(binary) if binary else config.default_binary()
     if not binary.is_file():
         raise LaunchError(f"game binary not found at {binary}")
@@ -313,7 +324,7 @@ def launch(
         "skate3_loader_overlay_title": entry.name,
         "skate3_loader_overlay_subtitle": pack.name,
         "skate3_loader_overlay_hue": f"{art.hue_for(entry.world_id):.4f}",
-        **_level_picker_cvars(pack, all_packs),
+        **_level_picker_cvars(pack, all_packs, include_broken=manual),
         "skate3_loader_open_picker": "true" if open_picker else "false",
         # -1 leaves the boot path alone; otherwise the engine walks the menu to
         # this map using cursor feedback, which is far quicker than a fixed
@@ -398,6 +409,35 @@ def launch(
         # world data never arrives (measured 0/3 with the warp on, 3/3 with it
         # off, while every other DLC world is 3/3 WITH it).
         **{str(k): str(v) for k, v in (pack.settings or {}).items()},
+        # MANUAL MODE: stage the DLC and then get out of the way entirely.
+        #
+        # Ordered after the per-pack settings deliberately - this is a control
+        # condition, and a pack-specific workaround leaking into it would be
+        # exactly the confound the mode exists to remove.
+        #
+        # `skate3_warp_world` must be REMOVED (None), not blanked: the cvar
+        # parser takes the next argv entry as the value, so `--skate3_warp_world=`
+        # silently swallows the following flag as its world name.
+        #
+        # All FIVE warp switches have to go off. `_node` and `_lookup` default
+        # to TRUE and are not in the usual disable list, which is why an earlier
+        # per-pack workaround that turned off only folder/slug/item never
+        # actually stopped the substitution.
+        #
+        # And the overlay MUST be off. It hides itself when the macro completes,
+        # and in manual mode there is no macro - leaving it on covers the menus
+        # forever, which reads as "manual mode is broken too".
+        **({
+            "skate3_loader_overlay": "false",
+            "skate3_warp_world": None,
+            "skate3_warp_substitute_item": "false",
+            "skate3_warp_substitute_folder": "false",
+            "skate3_warp_substitute_slug": "false",
+            "skate3_warp_substitute_node": "false",
+            "skate3_warp_substitute_lookup": "false",
+            # Keep the frontend chatter: it is the diagnostic.
+            "skate3_fe_debug": "true",
+        } if manual else {}),
         # Investigation flags (--skate3_trace and friends) go last so a caller
         # can override anything above.
         **(extra_cvars or {}),
@@ -421,12 +461,22 @@ def launch(
     )
 
 
-def _level_picker_cvars(pack: Pack, all_packs: list[Pack] | None) -> dict[str, str]:
+def _level_picker_cvars(pack: Pack, all_packs: list[Pack] | None,
+                        include_broken: bool = False) -> dict[str, str]:
     """Everything the in-game picker needs to list maps across every pack.
 
     Maps in the staged pack switch in place; maps in any other pack are marked
     and, when chosen, written to the request file for the launcher to act on --
     the installed DLC set is fixed at boot, so those need a relaunch.
+
+    Maps recorded as `stalls` are LEFT OUT. Picking one costs a relaunch and a
+    200-second wait to arrive back where you started, which is not a choice
+    worth offering - and the picker is a controller-driven list where a label
+    is easy to miss. If it cannot load, it is not on the menu.
+
+    `include_broken` puts them back, for manual mode: there the broken ones are
+    the entire point, and the person picking is deliberately trying to reach
+    one by hand.
     """
     packs = all_packs if all_packs is not None else [pack]
     names: list[str] = []
@@ -435,6 +485,8 @@ def _level_picker_cvars(pack: Pack, all_packs: list[Pack] | None) -> dict[str, s
     worlds: list[str] = []
     for candidate in packs:
         for entry in sorted(candidate.maps, key=lambda m: m.sub_index):
+            if entry.status == "stalls" and not include_broken:
+                continue
             names.append(entry.name)
             owners.append(candidate.id)
             indices.append(str(entry.sub_index))

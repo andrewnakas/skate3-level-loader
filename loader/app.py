@@ -69,6 +69,25 @@ class LoaderApp(Gtk.Application):
     def play(self, pack: catalog.Pack, entry: catalog.MapEntry) -> None:
         if self.controller.phase is not session.Phase.IDLE:
             return
+        # A map that has been TESTED and never reaches gameplay is not started
+        # at all. Labelling it "WON'T LOAD" was not enough: the label is easy to
+        # miss, and the cost of missing it is a 200-second wait behind a loading
+        # screen that can only end in an error. Say so in the moment instead.
+        #
+        # This is the backstop rather than the only guard - the library hides
+        # these and the in-game picker omits them - because it is the one place
+        # every route to a launch passes through.
+        if entry.status == "stalls":
+            self.library.show_error(
+                f"{entry.name} does not load",
+                "This map was tested and never reaches gameplay in this build - "
+                "the frontend hangs before the world is ever drawn. It is not a "
+                "problem with your install, and nothing the launcher does can "
+                "work around it, so it is not offered.\n\n"
+                "Tick 'Show won't-load' in the header if you want to see the "
+                "tested-and-broken maps anyway.",
+            )
+            return
         windowed = self.library.windowed_toggle.get_active()
         self.library.set_status("")
         self.hold()
@@ -119,8 +138,9 @@ class LoaderApp(Gtk.Application):
     def _on_finished(self, exit_code: int) -> None:
         self.release()
         launch.clear_profile()
+        # `reload` sets its own status (the playable/hidden count), so clearing
+        # it afterwards would blank the line it just wrote.
         self.library.reload()
-        self.library.set_status("")
         self.library.present()
 
     def _on_failed(self, message: str) -> None:

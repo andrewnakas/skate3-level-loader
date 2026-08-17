@@ -270,6 +270,16 @@ def verdict_of(row: dict) -> str:
     if not row["shots"]:
         return "EXPECTED FAIL" if known_bad else "NO SHOT"
     if known_bad:
+        # A shot is NOT recovery. `verifyspot` now photographs on timeout
+        # rather than reporting nothing, so a map whose macro confirmed
+        # nothing still yields a picture - of the STOCK world it was left
+        # sitting in. Eleven such maps came back "rendered" together and were
+        # all within distance 2-21 of each other: one place, not eleven.
+        #
+        # Recovery means landing somewhere of its OWN, so it has to clear the
+        # same distinctness bar as any other map.
+        if row.get("distinct") is False:
+            return "STILL STUCK"
         return "RECOVERED?"
     if row.get("reproducible") is False:
         return "FLAKY"

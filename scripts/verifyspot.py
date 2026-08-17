@@ -144,6 +144,7 @@ def main() -> int:
     burst_dir = SHOTS / "burst"
     burst_dir.mkdir(parents=True, exist_ok=True)
     ok = False
+    timed_out = False
     try:
         start = time.monotonic()
         while time.monotonic() - start < args.timeout:
@@ -153,6 +154,28 @@ def main() -> int:
             if session.process.poll() is not None:
                 break
             time.sleep(0.5)
+
+        # PHOTOGRAPH IT ANYWAY when the wait ran out but the game is still up.
+        #
+        # `rendered_after_macro` waits for a takeover AFTER the macro, and that
+        # line is neither sufficient nor necessary. Its insufficiency was known
+        # (it appears with a black screen on screen). Its NON-necessity was
+        # found the hard way: this script printed "never rendered after the
+        # macro - no shot taken" and then killed the game while a person was
+        # standing in a fully loaded Hastings Bowl, skating it.
+        #
+        # That matters far beyond one map. The entire "these packs never load"
+        # classification rests on this script's exit 2, so any map that loads
+        # without emitting the line was recorded as broken and then not
+        # re-examined, because it was recorded as broken.
+        #
+        # A picture can answer "is a world on screen" and the log cannot, so
+        # take the picture and let `looks_unrendered` decide. Costs one burst on
+        # a genuinely dead run; buys back every map misfiled by a missing line.
+        if not ok and session.process.poll() is None:
+            timed_out = True
+            ok = True
+
         if ok:
             # Let the world finish popping in; a shot taken on the takeover
             # frame catches half-streamed geometry and is unfair to judge.
@@ -178,13 +201,16 @@ def main() -> int:
             spreads.sort(reverse=True)
             print(f":: capture    {len(frames)}/{args.burst} frames, spread "
                   + " ".join(f"{s:.0f}" for s, _ in spreads))
+            if timed_out:
+                print(f":: NO READY SIGNAL  no takeover after the macro within "
+                      f"{args.timeout:.0f}s - judging the picture instead")
             if spreads:
                 # The frame with the most going on is the one that actually
                 # caught the world; a blank read has nothing in it by
                 # definition.
                 shutil.copyfile(spreads[0][1], shot)
         else:
-            print(":: never rendered after the macro - no shot taken")
+            print(":: the game exited before anything could be photographed")
     finally:
         # Keep the log next to the shot. The picture says WHERE we landed; the
         # log is where a machine-checkable signal for it has to come from, and

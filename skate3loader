@@ -6,6 +6,7 @@
     ./skate3loader list                list imported packs and their maps
     ./skate3loader play <world-id>     boot straight into one map, no GUI
     ./skate3loader run [world-id]      play; starts at the in-game map picker
+    ./skate3loader manual <pack-id>    stage a pack, no automation - you navigate
     ./skate3loader scan [dir]          import every usable pack in a folder
     ./skate3loader doctor              check the environment
 """
@@ -107,6 +108,60 @@ def cmd_run(args) -> int:
     return sup.run(pack, entry, open_picker=open_picker, windowed=windowed)
 
 
+def cmd_manual(args) -> int:
+    """Stage a pack and hand the game over, with no automation at all.
+
+    The diagnostic for maps that never load. Everything the loader normally does
+    to steer you into a map is off - no macro, no warp substitution, no loading
+    cover - so what you get is the game booted with that DLC installed and its
+    own menus in front of you.
+
+    That distinction has never been tested. Every hypothesis ruled out so far
+    about the 14 broken maps was measured with this automation still running, so
+    "the loader breaks them" and "they are broken" were never separated. If you
+    can reach the world by hand, the fault is ours.
+    """
+    from loader import catalog, config, launch
+
+    packs = catalog.load_all(config.CATALOG_DIR)
+    target = args[0] if args and not args[0].startswith("-") else None
+    if not target:
+        print("usage: ./skate3loader manual <world-id|pack-id> [--windowed]",
+              file=sys.stderr)
+        print("\npacks:", file=sys.stderr)
+        for pack in packs:
+            broken = sum(1 for m in pack.maps if m.status == "stalls")
+            mark = f"  ({broken} of {len(pack.maps)} never load)" if broken else ""
+            print(f"  {pack.id}{mark}", file=sys.stderr)
+        return 2
+
+    entry, pack = None, None
+    for candidate in packs:
+        if candidate.id == target:
+            pack, entry = candidate, sorted(candidate.maps,
+                                            key=lambda m: m.sub_index)[0]
+            break
+        found = candidate.map_by_world(target)
+        if found:
+            pack, entry = candidate, found
+            break
+    if pack is None:
+        print(f"no pack or map {target!r}; try ./skate3loader list", file=sys.stderr)
+        return 1
+
+    print(f":: staging {pack.name} - {len(pack.maps)} map(s)")
+    print(":: NO automation: no macro, no warp, no loading cover")
+    print(":: navigate the game's own menus. Backtick opens the loader picker.")
+    print(f":: log: {config.FREESKATE_DIR / 'runtime' / 'logs' / 'freeskate.log'}")
+    session = launch.launch(pack, entry, macro="", manual=True,
+                            all_packs=packs, windowed="--windowed" in args)
+    try:
+        return session.process.wait()
+    except KeyboardInterrupt:
+        session.stop()
+        return 130
+
+
 def cmd_doctor(_args) -> int:
     from loader import doctor
 
@@ -137,6 +192,7 @@ def main() -> int:
             "play": cmd_play,
             "doctor": cmd_doctor,
             "run": cmd_run,
+            "manual": cmd_manual,
             "scan": cmd_scan,
         }
         handler = commands.get(args[0])

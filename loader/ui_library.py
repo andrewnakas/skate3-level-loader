@@ -113,6 +113,17 @@ class LibraryWindow(Gtk.ApplicationWindow):
         )
         header.pack_end(self.windowed_toggle)
 
+        # Off by default: a map that cannot load is not worth a click. The
+        # toggle exists so the information is not lost - which packs were
+        # tested and found broken is worth being able to see - but the default
+        # library is the maps you can actually skate.
+        self.show_broken = Gtk.CheckButton(label="Show won't-load")
+        self.show_broken.set_tooltip_text(
+            "Also list the maps that were tested and never reach gameplay."
+        )
+        self.show_broken.connect("toggled", lambda _b: self.reload())
+        header.pack_end(self.show_broken)
+
         self.status = Gtk.Label(label="")
         self.status.set_ellipsize(Pango.EllipsizeMode.END)
         self.status.get_style_context().add_class("status-line")
@@ -142,6 +153,13 @@ class LibraryWindow(Gtk.ApplicationWindow):
 
     # -- content -----------------------------------------------------------
 
+    def visible_maps(self, pack: catalog.Pack) -> list[catalog.MapEntry]:
+        """The maps of `pack` worth offering, in list order."""
+        entries = sorted(pack.maps, key=lambda m: m.sub_index)
+        if self.show_broken.get_active():
+            return entries
+        return [e for e in entries if e.status != "stalls"]
+
     def reload(self) -> None:
         for child in self.body.get_children():
             self.body.remove(child)
@@ -149,8 +167,18 @@ class LibraryWindow(Gtk.ApplicationWindow):
         packs = catalog.load_all(config.CATALOG_DIR)
         if not packs:
             self.body.add(self._empty_state())
+        shown = 0
         for pack in packs:
-            self.body.add(self._pack_section(pack))
+            entries = self.visible_maps(pack)
+            # A pack with nothing playable left is dropped whole, heading and
+            # all - an empty section under a pack name reads as a bug.
+            if not entries:
+                continue
+            shown += len(entries)
+            self.body.add(self._pack_section(pack, entries))
+        hidden = sum(len(p.maps) for p in packs) - shown
+        if hidden and not self.show_broken.get_active():
+            self.set_status(f"{shown} playable · {hidden} hidden (won't load)")
         self.body.show_all()
 
     def _empty_state(self) -> Gtk.Widget:
@@ -176,7 +204,7 @@ class LibraryWindow(Gtk.ApplicationWindow):
         box.add(button)
         return box
 
-    def _pack_section(self, pack: catalog.Pack) -> Gtk.Widget:
+    def _pack_section(self, pack: catalog.Pack, entries: list) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         head_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         rail = Gtk.Box()
@@ -187,7 +215,7 @@ class LibraryWindow(Gtk.ApplicationWindow):
         heading = Gtk.Label(xalign=0, label=pack.name.upper())
         heading.get_style_context().add_class("pack-heading")
         head_row.pack_start(heading, False, False, 0)
-        count = Gtk.Label(xalign=0, label=f"{len(pack.maps)} SPOTS")
+        count = Gtk.Label(xalign=0, label=f"{len(entries)} SPOTS")
         count.get_style_context().add_class("pack-count")
         count.set_valign(Gtk.Align.CENTER)
         head_row.pack_start(count, False, False, 0)
@@ -200,7 +228,7 @@ class LibraryWindow(Gtk.ApplicationWindow):
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
         flow.set_column_spacing(12)
         flow.set_row_spacing(12)
-        for entry in pack.maps:
+        for entry in entries:
             flow.add(MapCard(pack, entry, self.on_play))
         box.add(flow)
         return box

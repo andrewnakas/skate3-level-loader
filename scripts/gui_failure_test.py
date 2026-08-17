@@ -56,8 +56,12 @@ def main() -> int:
     def start(_app):
         controller = app.controller
         packs = catalog.load_all(config.CATALOG_DIR)
-        pack = packs[0]
-        entry = pack.maps[0]
+        # Must be a map that CAN launch. This used to be `packs[0].maps[0]`,
+        # which is DHS by DH13 - a `stalls` map - and every "a normal click
+        # starts a launch" check below silently became a test of the refusal
+        # path the moment won't-load maps stopped being launchable.
+        pack, entry = next((p, e) for p in packs for e in p.maps
+                           if e.status == "boots")
 
         check("starts IDLE", controller.phase is session.Phase.IDLE,
               str(controller.phase))
@@ -98,6 +102,40 @@ def main() -> int:
               errors[0][0] if errors else "no error shown")
         check("no real process was ever killed", len(killed) > 0,
               f"{len(killed)} stubbed kill(s) - none reached pkill")
+
+        # A map that cannot load must not be launchable from anywhere. Labelling
+        # it was not enough - the label is easy to miss and missing it costs a
+        # 200-second wait that can only end in an error.
+        broken = next(((p, e) for p in packs for e in p.maps
+                       if e.status == "stalls"), None)
+        if broken is None:
+            check("a known-broken map exists to test with", False, "none in catalog")
+        else:
+            bad_pack, bad_entry = broken
+            before, before_errors = len(launched), len(errors)
+            app.play(bad_pack, bad_entry)
+            check("clicking a won't-load map starts nothing",
+                  len(launched) == before,
+                  f"{len(launched) - before} launch(es) started")
+            check("and says why immediately", len(errors) == before_errors + 1,
+                  f"{len(errors) - before_errors} messages shown")
+            check("the library is still usable afterwards",
+                  controller.phase is session.Phase.IDLE, str(controller.phase))
+
+        # The picker the game itself shows must omit them too.
+        from loader import launch as launch_mod
+        offered = launch_mod._level_picker_cvars(packs[0], packs)
+        names = offered["skate3_loader_levels"].split("|")
+        broken_names = {e.name for p in packs for e in p.maps
+                        if e.status == "stalls"}
+        check("the in-game picker omits won't-load maps",
+              not [n for n in names if n in broken_names],
+              f"offered {[n for n in names if n in broken_names]}")
+        check("the picker's parallel lists stay aligned",
+              len(names) == len(offered["skate3_loader_level_packs"].split("|"))
+              == len(offered["skate3_loader_level_indices"].split("|"))
+              == len(offered["skate3_loader_level_worlds"].split("|")),
+              "a name would map to the wrong world")
 
         # The retry cases below synthesize failures with no matching `play()`,
         # so `_on_failed`'s `release()` would outnumber `hold()` and GLib would

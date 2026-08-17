@@ -31,6 +31,7 @@ you drop into the map with no menus. Quit the game and the library comes back.
 ./skate3loader scan <dir>          import every usable pack in a folder
 ./skate3loader play <world-id>     boot straight into one map, no GUI
 ./skate3loader run [world-id]      play, starting at the in-game map picker
+./skate3loader manual <pack-id>    stage a pack, no automation — you navigate
 ```
 
 ---
@@ -72,6 +73,37 @@ generator guarantees. Verified working — the game mounts packs carrying one.
 
 ---
 
+## Diagnosing a map that won't load
+
+```bash
+./skate3loader manual <pack-id> --windowed
+```
+
+Stages the DLC and gets out of the way: no macro, no warp, no loading cover. You
+navigate the game's own menus.
+
+This is how the "14 broken maps" turned out to be wrong. Every hypothesis ruled
+out before it had been tested with the loader's automation still driving, so
+"the loader breaks these" and "these are broken" were never separated. Hastings
+Bowl loaded by hand on the first try, and now loads unattended in ~62 s with the
+boot warp disabled for that pack:
+
+```json
+"settings": {
+  "skate3_warp_substitute_item":   false,
+  "skate3_warp_substitute_folder": false,
+  "skate3_warp_substitute_slug":   false,
+  "skate3_warp_substitute_node":   false,
+  "skate3_warp_substitute_lookup": false
+}
+```
+
+All **five** switches matter — `_node` and `_lookup` default to true and aren't
+in the usual disable list, which is why an earlier workaround that turned off
+only the first three never actually stopped the substitution.
+
+---
+
 ## In-game map picker
 
 Press **backtick** (or the **Xbox Guide** button) while skating to switch maps
@@ -95,9 +127,9 @@ Cards are labelled from real test runs, not guesswork:
 - **WON'T LOAD** — tested, and it hangs or never renders
 
 Some community packs simply don't load in this build. They're labelled so you
-don't click into a hang. Current catalog: **40 of 54 maps playable.**
+don't click into a hang. Current catalog: **41 of 54 maps playable.**
 
-All 40 were verified together on 2026-08-17 — 120 runs, every map reproducible
+40 were verified together on 2026-08-17 — 120 runs, every map reproducible
 across its runs and distinct from every other, zero failures. Both thresholds
 cleared by more than 20x. See [Reliability](docs/reliability.md) for the numbers,
 the two flakes that turned up, and the retry rules they produced.
@@ -117,7 +149,7 @@ really did. The only ground truth is a screenshot.
 ```bash
 python3 scripts/verifyspot.py <world-id>            # boot one map, photograph it
 python3 scripts/verifyspot.py <pack-id>:<index>     # when a world id is ambiguous
-python3 scripts/sweep.py --status boots             # the 40 that should work (~2.2h)
+python3 scripts/sweep.py --status boots             # the maps that should work (~2.2h)
 python3 scripts/sweep.py                            # every map, 3 runs, contact sheet
 python3 scripts/sweep.py --only skate-it.13 --runs 3
 python3 scripts/sweep.py --report                   # re-judge existing shots, boots nothing
@@ -127,6 +159,13 @@ python3 scripts/sweep.py --report                   # re-judge existing shots, b
 working, and exits 0 only if every one was reproducible and distinct. A map
 recorded as `stalls` scores `EXPECTED FAIL` instead of failing the run, so
 keeping a broken pack imported doesn't make the suite permanently red.
+
+**A `stalls` map that renders is not automatically recovered.** `verifyspot` now
+photographs on timeout instead of reporting "never rendered" with no picture, so
+a map whose macro confirmed nothing still yields a shot — of the stock world it
+was left in. Eleven such maps came back "rendered" and all eleven were within
+distance 2–21 of each other: one place, not eleven. Recovery has to clear the
+distinctness bar too, which is what the `STILL STUCK` verdict is for.
 
 `sweep.py` writes `work/sweep/sweep.md`, `sweep.json` and a labelled
 `contact.png`. It judges three ways:

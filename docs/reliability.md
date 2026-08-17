@@ -4,6 +4,38 @@
 full pass over the current catalog — the three earlier clean sweeps covered the
 original 37 maps, before the Meebs pack was imported.
 
+> ## Correction, same day: "14 broken maps" was wrong
+>
+> Hastings Bowl is not broken. It now loads unattended in ~62 s, three runs,
+> spread 5 and nearest other map 267 — the same standard as every map below.
+> **The catalog is 41 playable, 13 still stuck.**
+>
+> It was found by booting the pack with no automation at all and walking the
+> menus by hand. Two faults in our own tooling had manufactured the list:
+>
+> 1. **The boot warp loads worlds without rendering them** — the same
+>    zero-draw-record failure as the unsolved direct warp (`records=0 views=0`).
+>    Any map routed through it looks dead. Turning all five
+>    `skate3_warp_substitute_*` switches off per pack, and letting the macro
+>    navigate, is what fixed Hastings Bowl.
+> 2. **`verifyspot` could not see a successful load.** It waited for a takeover
+>    line after the macro and, on timeout, took *no picture* and reported
+>    "never rendered" — printing exactly that while a person was skating the
+>    map. The whole classification rested on that exit code.
+>
+> The `EXPECTED FAIL` verdict described below made it worse: it turned a wrong
+> classification into a passing test. A gate that excuses the cases it cannot
+> explain is not a gate. Both are fixed — `verifyspot` now photographs on
+> timeout, and a `stalls` map that renders must still clear the distinctness
+> bar (`STILL STUCK`) before it counts as recovered.
+>
+> **Do not read the 13 as settled.** Ten of them were retested with the warp off
+> and all ten rendered the *stock world*, colliding with each other at distance
+> 2–21. They reach gameplay and never confirm their map. The five single-map
+> packs are now configured identically to Hastings Bowl and still fail, so the
+> difference is in the pack, not the navigation — boot one with
+> `./skate3loader manual <pack>` and check whether its map is listed at all.
+
 | | |
 |---|---|
 | loader | `3cf012b` + the changes described below |
