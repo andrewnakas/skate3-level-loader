@@ -28,7 +28,7 @@
       "world_id": "RAH2",
       "name": "The Animal House",
       "sub_index": 2,
-      "log_seen": false,
+      "log_seen": true,
       "spot_verified": false,
       "status": "stalls",
       "art": null

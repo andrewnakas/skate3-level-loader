@@ -9,6 +9,7 @@ on a worker thread and reports back through GLib.idle_add.
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -18,6 +19,17 @@ from . import guestmem, launch, logwatch, navigate
 from .catalog import MapEntry, Pack
 
 TICK_MS = 250
+# Give up on a boot that never reaches gameplay.
+#
+# Without this the GUI hangs on the loading screen FOREVER on a map that does
+# not load: the in-engine cover only hides once the world is up, so a broken
+# pack leaves you staring at a progress bar with no way back. The CLI
+# supervisor always had a boot timeout; the GUI did not.
+#
+# 200 s is well clear of a real boot - the slowest verified map takes ~78 s, and
+# a cold shader cache pushes that to ~90 s - so this only fires on a genuine
+# failure.
+BOOT_TIMEOUT_SECONDS = 200.0
 # How long to wait past "ready" before handing the screen to the game, so the
 # first gameplay frame is up rather than the tail of the load.
 HANDOVER_DELAY_MS = 1200
@@ -59,6 +71,7 @@ class SessionController:
         self._tick_id = 0
         self._attempt = 0
         self._handover_pending = 0
+        self._boot_started = 0.0
         self._windowed = False
         self._window_announced = False
         # Bumped whenever a session is abandoned, so a staging thread that
@@ -86,6 +99,7 @@ class SessionController:
         self._window_announced = False
         self.phase = Phase.LOADING
         self._handover_pending = 0
+        self._boot_started = time.monotonic()
         # A pack whose maps share one world id has to walk to its row: the item
         # patch cannot tell those spots apart and collapses them onto one.
         macro = navigate.macro_for(self.pack, self.entry)
@@ -173,6 +187,16 @@ class SessionController:
 
         if self.phase is Phase.LOADING:
             self._emit("on_progress", status.fraction, status.detail)
+
+            waited = time.monotonic() - self._boot_started
+            if waited > BOOT_TIMEOUT_SECONDS:
+                name = self.entry.name if self.entry else "that map"
+                self._fail(
+                    f"{name} did not load within {BOOT_TIMEOUT_SECONDS:.0f} seconds. "
+                    "Some community packs never reach gameplay in this build - the "
+                    "library marks the ones already known to fail as WON'T LOAD."
+                )
+                return False
 
             # Once the game is presenting, its own overlay covers the load, so
             # the launcher's cover is no longer needed (and cannot reliably stay

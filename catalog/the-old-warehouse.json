@@ -10,7 +10,7 @@
       "world_id": "tow9",
       "name": "The Old Warehouse",
       "sub_index": 0,
-      "log_seen": false,
+      "log_seen": true,
       "spot_verified": false,
       "status": "stalls",
       "art": null

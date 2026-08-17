@@ -46,7 +46,7 @@
       "world_id": "Momentum",
       "name": "Momentum 5.0 bv DH13",
       "sub_index": 5,
-      "log_seen": false,
+      "log_seen": true,
       "spot_verified": false,
       "status": "boots",
       "art": null
