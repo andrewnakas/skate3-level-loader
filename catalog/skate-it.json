@@ -1,0 +1,155 @@
+{
+  "id": "skate-it",
+  "name": "Skate IT",
+  "kind": "stfs",
+  "big": "/home/nakas/Downloads/SKATEIT",
+  "header": "",
+  "package": "",
+  "maps": [
+    {
+      "world_id": "sk8itbareclona",
+      "name": "Barcelona",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itcommcenter",
+      "name": "Community Center",
+      "sub_index": 1,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itdiy",
+      "name": "DIY",
+      "sub_index": 2,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itlibrary",
+      "name": "Library",
+      "sub_index": 3,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itlondon",
+      "name": "London",
+      "sub_index": 4,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itmatrix",
+      "name": "Matrix Plaza",
+      "sub_index": 5,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itmegapark",
+      "name": "MegaPark",
+      "sub_index": 6,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itparis",
+      "name": "paris",
+      "sub_index": 7,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itplanb",
+      "name": "PlanB",
+      "sub_index": 8,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itrio",
+      "name": "Rio",
+      "sub_index": 9,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itxgames",
+      "name": "SanFrancisco",
+      "sub_index": 10,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itschool",
+      "name": "School",
+      "sub_index": 11,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itshanghai",
+      "name": "Shanghai",
+      "sub_index": 12,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "sk8itspillway",
+      "name": "Spillway",
+      "sub_index": 13,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_h4_harrisburghskatepark_Start",
+    "Z_sk8itbareclona_barcelona_Start",
+    "Z_sk8itcommcenter_communitycenter_Start",
+    "Z_sk8itdiy_diy_Start",
+    "Z_sk8itlibrary_library_Start",
+    "Z_sk8itlondon_london_Start",
+    "Z_sk8itmatrix_matrixplaza_Start",
+    "Z_sk8itmegapark_megapark_Start",
+    "Z_sk8itparis_paris_Start",
+    "Z_sk8itplanb_planb_Start",
+    "Z_sk8itrio_rio_Start",
+    "Z_sk8itschool_school_Start",
+    "Z_sk8itshanghai_shanghai_Start",
+    "Z_sk8itspillway_spillway_Start",
+    "Z_sk8itxgames_sanfrancisco_Start"
+  ],
+  "boots_at_start": false
+}

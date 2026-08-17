@@ -1,0 +1,24 @@
+{
+  "id": "weining-lu",
+  "name": "Weining Lu",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/Weining Lu/Weining Lu/weining_lu_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/Weining Lu/Weining Lu/weining_lu_00000000.header",
+  "package": "WEININGLU",
+  "maps": [
+    {
+      "world_id": "Weining Lu",
+      "name": "Weining Lu",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_weining_lu_weininglu_Start"
+  ],
+  "boots_at_start": false
+}

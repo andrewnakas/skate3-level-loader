@@ -1,0 +1,24 @@
+{
+  "id": "official-afterdark",
+  "name": "After Dark",
+  "kind": "stfs",
+  "big": "/home/nakas/.local/share/skate3/dlc_available/B6B9066330A7A2E23BA51669D0AF30842776D2AF45",
+  "header": "",
+  "package": "",
+  "maps": [
+    {
+      "world_id": "SanitariumDLC",
+      "name": "Sanatorium",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_Sanitarium_Start"
+  ],
+  "boots_at_start": false
+}

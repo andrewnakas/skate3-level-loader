@@ -1,0 +1,22 @@
+{
+  "id": "official-sanvan",
+  "name": "San Van Party Pack",
+  "kind": "stfs",
+  "big": "/home/nakas/.local/share/skate3/dlc_available/20CA648716CBD7F24D85E9314A3532F9CC158D4F45",
+  "header": "",
+  "package": "",
+  "maps": [
+    {
+      "world_id": "AGPark",
+      "name": "Anti-Gravity Park",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [],
+  "boots_at_start": false
+}

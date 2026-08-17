@@ -1,0 +1,64 @@
+{
+  "id": "sleepen-map-archive",
+  "name": "Sleepen Map Archive",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/Sleepen Map Archive/Sleepen Map Archive/0000000000000000/454108E6/00000002/SLEEPENMAPARCHIVE/sleepen_map_archive_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/Sleepen Map Archive/Sleepen Map Archive/0000000000000000/454108E6/Headers/00000002/SLEEPENMAPARCHIVE.header",
+  "package": "SLEEPENMAPARCHIVE",
+  "maps": [
+    {
+      "world_id": "B6",
+      "name": "Bay Creek Skatepark",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "H4",
+      "name": "Harrisburgh Skatepark",
+      "sub_index": 1,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "RAH2",
+      "name": "The Animal House",
+      "sub_index": 2,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "tow9",
+      "name": "The Old Warehouse",
+      "sub_index": 3,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "X5",
+      "name": "X-Games Osaka 2025",
+      "sub_index": 4,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_b6_baycreekskatepark_Start",
+    "Z_h4_harrisburghskatepark_Start",
+    "Z_rah2_theanimalhouse_Start",
+    "Z_tow9_theoldwarehouse_Start",
+    "Z_x5_xgamesosaka2025_Start"
+  ],
+  "boots_at_start": false
+}

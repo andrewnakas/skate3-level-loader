@@ -1,0 +1,9 @@
+# Test output: sweeps, screenshots, logs, rescued corpora. Large and regenerable.
+work/
+
+# Extracted pack payloads, never redistributed from here.
+cache/
+packs/
+
+__pycache__/
+*.pyc

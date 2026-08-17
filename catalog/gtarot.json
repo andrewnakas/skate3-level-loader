@@ -1,0 +1,24 @@
+{
+  "id": "gtarot",
+  "name": "gtarot",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/gtabrainrot/gtabrainrot/GTAROT/gtarot_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/gtabrainrot/gtabrainrot/GTAROT.header",
+  "package": "GTAROT",
+  "maps": [
+    {
+      "world_id": "gtarotty191919",
+      "name": "GTA V Mega Brainrot",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_gtarotty191919_gtavmegabrainrot_Start"
+  ],
+  "boots_at_start": false
+}

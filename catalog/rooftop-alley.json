@@ -1,0 +1,24 @@
+{
+  "id": "rooftop-alley",
+  "name": "Rooftop Alley",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/Rooftop Alley/Rooftop Alley/rooftop_alley_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/Rooftop Alley/Rooftop Alley/rooftop_alley_00000000.header",
+  "package": "ROOFTOPALLEY",
+  "maps": [
+    {
+      "world_id": "Rooftop Alley",
+      "name": "Roopftop Alley",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_rooftop_alley_roopftopalley_Start"
+  ],
+  "boots_at_start": false
+}

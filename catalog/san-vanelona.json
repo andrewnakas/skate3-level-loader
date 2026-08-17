@@ -1,0 +1,194 @@
+{
+  "id": "san-vanelona",
+  "name": "San Vanelona",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/San Vanelona/San Vanelona/0000000000000000/454108E6/00000002/SANVANELONA/san_vanelona_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/San Vanelona/San Vanelona/0000000000000000/454108E6/Headers/00000002/SANVANELONA.header",
+  "package": "SANVANELONA",
+  "maps": [
+    {
+      "world_id": "San Vanelona",
+      "name": "Art Gallery",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Cathedral",
+      "sub_index": 1,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "City Hall",
+      "sub_index": 2,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Community Center",
+      "sub_index": 3,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "DIY Park",
+      "sub_index": 4,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Elementary School",
+      "sub_index": 5,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Industrial Warehouse",
+      "sub_index": 6,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Library",
+      "sub_index": 7,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Matrix Plaza",
+      "sub_index": 8,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Mega Park",
+      "sub_index": 9,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Monument",
+      "sub_index": 10,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Parkade",
+      "sub_index": 11,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "PJ Mansion",
+      "sub_index": 12,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Regs",
+      "sub_index": 13,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Skate Plaza",
+      "sub_index": 14,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Slappys",
+      "sub_index": 15,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Urban Res Top",
+      "sub_index": 16,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "San Vanelona",
+      "name": "Zen Plaza",
+      "sub_index": 17,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_san_vanelona_artgallery_Start",
+    "Z_san_vanelona_cathedral_Start",
+    "Z_san_vanelona_cityhall_Start",
+    "Z_san_vanelona_communitycenter_Start",
+    "Z_san_vanelona_diypark_Start",
+    "Z_san_vanelona_elementaryschool_Start",
+    "Z_san_vanelona_industrialwarehouse_Start",
+    "Z_san_vanelona_library_Start",
+    "Z_san_vanelona_matrixplaza_Start",
+    "Z_san_vanelona_megapark_Start",
+    "Z_san_vanelona_monument_Start",
+    "Z_san_vanelona_parkade_Start",
+    "Z_san_vanelona_pjmansion_Start",
+    "Z_san_vanelona_regs_Start",
+    "Z_san_vanelona_skateplaza_Start",
+    "Z_san_vanelona_slappys_Start",
+    "Z_san_vanelona_urbanrestop_Start",
+    "Z_san_vanelona_zenplaza_Start"
+  ],
+  "boots_at_start": false
+}

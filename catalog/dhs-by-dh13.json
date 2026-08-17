@@ -1,0 +1,24 @@
+{
+  "id": "dhs-by-dh13",
+  "name": "Dhs By Dh13",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/DHS - Add to DLC folder/DHS - Add to DLC folder/dhs_by_dh13_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/DHS - Add to DLC folder/DHS - Add to DLC folder/dhs_by_dh13_00000000.header",
+  "package": "DHSBYDH13",
+  "maps": [
+    {
+      "world_id": "DHS 32221",
+      "name": "DHS by DH13",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_dhs_32221_dhsbydh13_Start"
+  ],
+  "boots_at_start": false
+}

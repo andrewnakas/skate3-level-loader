@@ -1,0 +1,28 @@
+{
+  "id": "official-dlc",
+  "name": "Danny Way's Mega Compound",
+  "kind": "stfs",
+  "big": "/home/nakas/.local/share/skate3/dlc/E8CB22B7FEA270B0D0188C31BDFE69A71F0B94D145",
+  "header": "",
+  "package": "",
+  "maps": [
+    {
+      "world_id": "DW_MegaCompund",
+      "name": "Danny Way's Mega Compound",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_folder": "false",
+    "skate3_warp_substitute_slug": "false",
+    "skate3_warp_substitute_item": "false"
+  },
+  "spawn_nodes": [
+    "Z_DWMegaCompound_Start"
+  ],
+  "boots_at_start": true
+}

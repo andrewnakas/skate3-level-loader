@@ -1,0 +1,24 @@
+{
+  "id": "olay-holes",
+  "name": "Olay Holes",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/Olay Holes/Olay Holes/olay_holes_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/Olay Holes/Olay Holes/olay_holes_00000000.header",
+  "package": "OLAYHOLES",
+  "maps": [
+    {
+      "world_id": "Olay Holes",
+      "name": "Olay Holes",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_olay_holes_olayholes_Start"
+  ],
+  "boots_at_start": false
+}

@@ -1,0 +1,24 @@
+{
+  "id": "official-maloof",
+  "name": "Maloof Money Cup NYC",
+  "kind": "stfs",
+  "big": "/home/nakas/.local/share/skate3/dlc/0165E5B906309F63ACA64BC2DF01667B9930C47D45",
+  "header": "",
+  "package": "",
+  "maps": [
+    {
+      "world_id": "MaloofMoneyCupDLC",
+      "name": "Maloof Money Cup NYC",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_MaloofMCNYC_Start"
+  ],
+  "boots_at_start": false
+}

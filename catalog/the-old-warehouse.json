@@ -1,0 +1,24 @@
+{
+  "id": "the-old-warehouse",
+  "name": "The Old Warehouse",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/The Old Warehouse/The Old Warehouse/0000000000000000/454108E6/00000002/THEOLDWAREHOUSE/the_old_warehouse_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/The Old Warehouse/The Old Warehouse/0000000000000000/454108E6/Headers/00000002/THEOLDWAREHOUSE.header",
+  "package": "THEOLDWAREHOUSE",
+  "maps": [
+    {
+      "world_id": "tow9",
+      "name": "The Old Warehouse",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_tow9_theoldwarehouse_Start"
+  ],
+  "boots_at_start": false
+}

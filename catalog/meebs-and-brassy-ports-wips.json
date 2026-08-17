@@ -1,0 +1,75 @@
+{
+  "id": "meebs-and-brassy-ports-wips",
+  "name": "Meebs and Brassy Ports (WIPS)",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3/packs/extracted/Meebs and Brassy Ports/Meebs and Brassy Ports/0000000000000000/454108E6/00000002/MEEBSANDBRASSYPORTSWIPS/meebs_and_brassy_ports_wips_00000000.big",
+  "header": "/home/nakas/Documents/skate3/packs/extracted/Meebs and Brassy Ports/Meebs and Brassy Ports/0000000000000000/454108E6/Headers/00000002/MEEBSANDBRASSYPORTSWIPS.header",
+  "package": "MEEBSANDBRASSYPORTSWIPS",
+  "maps": [
+    {
+      "world_id": "AuburnbyLock",
+      "name": "Auburn by Lock",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "SOV",
+      "name": "Back SOV by Validus",
+      "sub_index": 1,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "BoneyardbySimpoMode",
+      "name": "Boneyard by Simpomode",
+      "sub_index": 2,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "Industrial Zone",
+      "name": "Industrial Zone by Jean Olive",
+      "sub_index": 4,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    },
+    {
+      "world_id": "Momentum",
+      "name": "Momentum 5.0 bv DH13",
+      "sub_index": 5,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "boots",
+      "art": null
+    },
+    {
+      "world_id": "The Alley4",
+      "name": "The Alley by Ovanny (WIP)",
+      "sub_index": 6,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "stalls",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_auburnbylock_auburnbylock_Start",
+    "Z_boneyardbysimpomode_boneyardbysimpomode_Start",
+    "Z_bral_beach2_bralingtonbeachbybralunitwip_Start",
+    "Z_industrial_zone_industrialzonebyjeanolive_Start",
+    "Z_momentum_momentum50bvdh13_Start",
+    "Z_sov_4_backsovbyvalidus_Start",
+    "Z_the_alley4_thealleybyovannywip_Start"
+  ],
+  "boots_at_start": false
+}
