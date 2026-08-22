@@ -28,6 +28,17 @@ The macOS build is not notarized, so Gatekeeper blocks it until you either run
 that `xattr` line or use **System Settings → Privacy & Security → Open Anyway**.
 Sequoia removed the old Control-click shortcut.
 
+Unpack the engine archive into an `engine/` folder **beside** the launcher — on
+macOS beside the `.app`, not inside it, because anything written into the bundle
+invalidates its signature and it will not start:
+
+```
+Skate 3 Level Loader.app        skate3loader/            skate3loader\
+engine/                         engine/                  engine\
+  skate3                          skate3                   skate3.exe
+  librexruntime.dylib             librexruntime.so         rexruntime.dll
+```
+
 **First run** asks for your Skate 3 ISO and Title Update 3 package, then hands
 them to the game's own installer - the loader extracts nothing itself. If a
 Skate3Recomp install is already on the machine it offers that instead, and

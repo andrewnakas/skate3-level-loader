@@ -126,6 +126,23 @@ INSTALL = _path(
 
 # Shipped next to the executable by the release archive.
 BUNDLED_BINARY = app_dir() / "engine" / BINARY_NAME
+
+
+def bundled_engines() -> list[Path]:
+    """`engine/<binary>` at or above the executable's directory.
+
+    Walking up matters on macOS: `app_dir()` inside a .app is
+    `Skate 3 Level Loader.app/Contents/MacOS`, and putting the engine THERE
+    modifies the bundle, which invalidates its ad-hoc signature and stops it
+    launching. So `engine/` beside the .app has to work too.
+    """
+    found: list[Path] = []
+    directory = app_dir()
+    for candidate in [directory, *directory.parents[:3]]:
+        binary = candidate / "engine" / BINARY_NAME
+        if binary not in found:
+            found.append(binary)
+    return found
 # The dev build: it carries the renderer fixes and the crash reporter.
 DEV_BINARY = SKATE3 / "skate3recomp-dev" / "out" / "build" / BUILD_PRESET / BINARY_NAME
 SHIPPED_BINARY = INSTALL / BINARY_NAME
@@ -139,7 +156,8 @@ def engine_candidates() -> list[Path]:
     configured = settings.load().get("engine")
     if configured:
         found.append(Path(configured).expanduser())
-    found += [BUNDLED_BINARY, DEV_BINARY, SHIPPED_BINARY]
+    found += bundled_engines()
+    found += [DEV_BINARY, SHIPPED_BINARY]
     return found
 
 
