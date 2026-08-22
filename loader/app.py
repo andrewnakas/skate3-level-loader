@@ -10,7 +10,14 @@ from pathlib import Path
 # Both the launcher and the game must be on X11 for the loading screen's
 # keep-above to bind; Wayland does not let a client raise itself. Set before GTK
 # is imported so it takes effect for this process too.
-os.environ.setdefault("GDK_BACKEND", "x11")
+#
+# LINUX ONLY. GDK on Windows is built with the win32 backend and on macOS with
+# quartz - neither has an x11 backend compiled in, so asking for one there makes
+# Gdk.Display.get_default() return None and GTK never initialises at all.
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("GDK_BACKEND", "x11")
+else:
+    os.environ.pop("GDK_BACKEND", None)
 
 import gi  # noqa: E402
 
@@ -18,7 +25,9 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gio, GLib, Gtk  # noqa: E402
 
-from . import art, catalog, config, launch, session, ui_library, ui_loading  # noqa: E402
+from . import (  # noqa: E402
+    art, catalog, config, launch, session, setup, ui_library, ui_loading, ui_setup,
+)
 
 
 class LoaderApp(Gtk.Application):
@@ -28,6 +37,7 @@ class LoaderApp(Gtk.Application):
             flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
         )
         self.library: ui_library.LibraryWindow | None = None
+        self.setup_window: ui_setup.SetupWindow | None = None
         self.loading: ui_loading.LoadingScreen | None = None
         self.controller: session.SessionController | None = None
 
@@ -38,6 +48,13 @@ class LoaderApp(Gtk.Application):
         return 0
 
     def do_activate(self):
+        # No game files yet: the first thing the user sees is the setup screen,
+        # not a library of maps none of which could possibly load.
+        if setup.needs_setup():
+            if self.setup_window is None:
+                self.setup_window = ui_setup.SetupWindow(self, on_done=self._on_setup_done)
+            self.setup_window.present()
+            return
         if self.library is None:
             self.library = ui_library.LibraryWindow(
                 self, on_play=self.play, on_import=self.import_pack
@@ -58,6 +75,13 @@ class LoaderApp(Gtk.Application):
             if not ui_loading.ensure_x11():
                 self.library.set_status("not on X11 - loading screen may sit behind the game")
         self.library.present()
+
+    def _on_setup_done(self, game_root) -> None:
+        """Game files are in place; retire the setup window and open the library."""
+        if self.setup_window is not None:
+            self.setup_window.destroy()
+            self.setup_window = None
+        self.do_activate()
 
     def do_shutdown(self):
         if self.controller:

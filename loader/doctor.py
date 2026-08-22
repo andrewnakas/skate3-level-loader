@@ -29,25 +29,33 @@ def run() -> tuple[bool, list[str]]:
             _check("pycairo (card rendering)", False, "install with: sudo apt install -y python3-cairo")
         )
 
-    # X11. The loading screen's keep-above does not bind under Wayland.
-    session_type = os.environ.get("XDG_SESSION_TYPE", "?")
-    has_x = bool(os.environ.get("DISPLAY"))
-    results.append(
-        _check(
-            f"X11 available (session is {session_type})",
-            has_x,
-            "" if has_x else "no DISPLAY; the loading screen cannot stay above the game",
+    # X11. The loading screen's keep-above does not bind under Wayland - and
+    # the whole question only exists on Linux, where a stacking hint is the only
+    # lever a client has. Windows and macOS get the in-engine cover and nothing
+    # to check.
+    if config.IS_LINUX:
+        session_type = os.environ.get("XDG_SESSION_TYPE", "?")
+        has_x = bool(os.environ.get("DISPLAY"))
+        results.append(
+            _check(
+                f"X11 available (session is {session_type})",
+                has_x,
+                "" if has_x else "no DISPLAY; the loading screen cannot stay above the game",
+            )
         )
-    )
 
     # The pieces we drive.
-    results.append(
-        _check(
-            f"freeskate at {config.FREESKATE_BIN}",
-            config.FREESKATE_BIN.is_file(),
-            "" if config.FREESKATE_BIN.is_file() else "set SKATE3LOADER_FREESKATE",
-        )
-    )
+    # freeskate is vendored and driven in-process now (loader/staging.py); what
+    # still has to exist on disk is the tree it stages into.
+    from . import staging
+
+    try:
+        staged = staging.make_config()
+        stage_ok, stage_detail = True, f"runtime {staged.game_root.parent}"
+    except Exception as exc:  # noqa: BLE001
+        stage_ok, stage_detail = False, str(exc)
+    results.append(_check("staging (vendored freeskate)", stage_ok, "" if stage_ok else stage_detail))
+
     binary = config.default_binary()
     results.append(
         _check(
@@ -56,50 +64,59 @@ def run() -> tuple[bool, list[str]]:
             "" if binary.is_file() else "set SKATE3LOADER_BINARY",
         )
     )
-    xex = config.INSTALL / "game" / "default.xex"
+    xex = config.game_data_root() / "default.xex"
     results.append(
-        _check(f"stock game data at {config.INSTALL}", xex.is_file(),
-               "" if xex.is_file() else "set SKATE3LOADER_INSTALL")
+        _check(f"game files at {config.game_data_root()}", xex.is_file(),
+               "" if xex.is_file() else
+               "no default.xex; the loader offers the ISO installer on first run")
     )
 
     # Screen locking, which is invisible until it has already ruined a run: a
     # locked session makes every window capture come back pure black while the
     # capture succeeds and the logs stay healthy. Only reported, not changed -
-    # `display.ensure_capturable()` does that at the start of a sweep.
-    from . import display
-
-    idle = display._value_of(
-        subprocess.run(["gsettings", "get", "org.gnome.desktop.session", "idle-delay"],
-                       capture_output=True, text=True).stdout)
-    results.append(
-        _check(
-            f"screen will not blank during a long run (idle-delay {idle or '?'})",
-            idle == "0",
-            "" if idle == "0" else
-            "captures go BLACK once the session locks; sweeps disable this themselves",
+    # `display.ensure_capturable()` does that at the start of a sweep. GNOME
+    # only, so Linux only; the capture harness does not ship off Linux anyway.
+    # The guard itself lives in the test harness, which is Linux-only and is not
+    # part of the frozen app - so its absence is a fact to report, not an error.
+    try:
+        from . import display
+    except ImportError:
+        display = None
+    if config.IS_LINUX and display is not None:
+        idle = display._value_of(
+            subprocess.run(["gsettings", "get", "org.gnome.desktop.session", "idle-delay"],
+                           capture_output=True, text=True).stdout)
+        results.append(
+            _check(
+                f"screen will not blank during a long run (idle-delay {idle or '?'})",
+                idle == "0",
+                "" if idle == "0" else
+                "captures go BLACK once the session locks; sweeps disable this themselves",
+            )
         )
-    )
 
     # Nothing else holding the game's resources.
-    running = subprocess.run(["pgrep", "-x", "skate3"], capture_output=True).returncode == 0
+    from . import proc
+
+    running = proc.game_running()
     results.append(
         _check("no game already running", not running,
                "" if not running else "a running game blocks staging; the loader will kill it")
     )
-    leaked = list(Path("/dev/shm").glob("xenia_memory_*"))
-    total = sum(p.stat().st_size for p in leaked if p.exists())
-    results.append(
-        _check(
-            f"no leaked shm segments ({len(leaked)} found)",
-            not leaked,
-            "" if not leaked else f"{total / 2**30:.1f} GiB in /dev/shm; the loader clears these",
+    if config.IS_LINUX:
+        count, total = proc.leaked_memory()
+        results.append(
+            _check(
+                f"no leaked shm segments ({count} found)",
+                not count,
+                "" if not count else f"{total / 2**30:.1f} GiB in /dev/shm; the loader clears these",
+            )
         )
-    )
-    free = shutil.disk_usage("/dev/shm").free
-    results.append(
-        _check(f"/dev/shm has room ({free / 2**30:.1f} GiB free)", free > 5 * 2**30,
-               "" if free > 5 * 2**30 else "the game reserves ~4.5 GiB and will hang without it")
-    )
+        free = shutil.disk_usage(proc.SHM_DIR).free
+        results.append(
+            _check(f"/dev/shm has room ({free / 2**30:.1f} GiB free)", free > 5 * 2**30,
+                   "" if free > 5 * 2**30 else "the game reserves ~4.5 GiB and will hang without it")
+        )
 
     # Content.
     from . import catalog

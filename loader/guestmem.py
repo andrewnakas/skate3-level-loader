@@ -58,7 +58,18 @@ class NotRunning(Exception):
 
 
 def find_segment() -> Path:
-    """The newest xenia_memory_* segment, i.e. the running game's."""
+    """The newest xenia_memory_* segment, i.e. the running game's.
+
+    LINUX ONLY. The shared mapping is only a visible FILE on a tmpfs; on Windows
+    and macOS it is an anonymous mapping with no path to open. Raising NotRunning
+    there is the honest answer and costs nothing: `session._in_gameplay()` already
+    falls back to the log going quiet, which is how it behaves on Linux whenever
+    the read fails too.
+    """
+    if not SHM_DIR.is_dir():
+        raise NotRunning(
+            "guest memory is only readable on Linux (no /dev/shm on this platform)"
+        )
     candidates = sorted(
         SHM_DIR.glob(SHM_GLOB), key=lambda p: p.stat().st_mtime, reverse=True
     )

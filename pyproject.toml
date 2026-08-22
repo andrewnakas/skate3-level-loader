@@ -1,0 +1,41 @@
+[project]
+name = "skate3loader"
+description = "Pick a Skate 3 map, watch it load, skate."
+readme = "README.md"
+requires-python = ">=3.11"
+dynamic = ["version"]
+
+# PyGObject is deliberately NOT pinned by pip on any platform: it is sdist-only
+# on PyPI, and every supported build takes it from the system instead - apt on
+# Linux, MSYS2 on Windows, Homebrew on macOS. Listing it here would invite a
+# source build that cannot succeed without the same C toolchain anyway.
+dependencies = [
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+# The Linux-only test harness (sweep, verifyspot, screenshot fingerprinting).
+harness = ["Pillow>=9"]
+# What CI needs to freeze the app.
+build = ["pyinstaller==6.22.2"]
+
+[project.scripts]
+skate3loader = "loader.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["loader", "loader.vendor"]
+
+[tool.setuptools.dynamic]
+version = { attr = "loader._version.__version__" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]

@@ -1,16 +1,15 @@
 """Staging and spawning a session.
 
 The staging work is entirely freeskate's -- this module writes a scratch map
-profile, asks `freeskate play _loader --dry-run` to stage it and print the argv
-it would have used, then launches that argv itself with a few loader-owned flags
-appended. That keeps freeskate's build_command() the single source of truth for
-the demo-path flags, and matches what play_monitored.sh / play_fixed.sh already do.
+profile, has loader.staging stage it and hand back the argv freeskate would have
+used, then launches that argv itself with a few loader-owned flags appended.
+That keeps freeskate's build_command() the single source of truth for the
+demo-path flags, and matches what play_monitored.sh / play_fixed.sh already do.
 """
 
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import signal
 import subprocess
@@ -18,10 +17,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import art, config
+from . import art, config, proc, staging
 from .catalog import MapEntry, Pack
-
-ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class LaunchError(Exception):
@@ -115,51 +112,29 @@ def write_profile(pack: Pack, entry: MapEntry) -> Path:
 def game_running() -> bool:
     """Whether a LIVE game process exists.
 
-    Zombies do not count. A defunct child still matches `pgrep -x skate3`, and
+    Zombies do not count. A defunct child still matches a process scan, and
     treating it as running is fatal here: `kill_running_game` then SIGKILLs a
     corpse for its whole timeout and raises, which is what wedged the launcher
     on an in-game map switch - the game had exited, its process just had not
     been reaped yet.
     """
-    found = subprocess.run(["pgrep", "-x", "skate3"], capture_output=True, text=True)
-    if found.returncode != 0:
-        return False
-    for line in found.stdout.split():
-        try:
-            with open(f"/proc/{line}/stat", "r") as handle:
-                state = handle.read().split(") ", 1)[1].split()[0]
-        except (OSError, IndexError):
-            continue
-        if state != "Z":
-            return True
-    return False
+    return proc.game_running()
 
 
 def kill_running_game(timeout: float = 10.0) -> None:
     """Stop any running game and release its shared memory.
 
     Two hard-won reasons this is not optional: freeskate's own single-instance
-    guard refuses to stage while a game is running, and a killed game leaks a
-    4.5 GiB /dev/shm segment that fills the tmpfs and makes the NEXT startup hang
-    forever.
+    guard refuses to stage while a game is running, and on Linux a killed game
+    leaks a 4.5 GiB /dev/shm segment that fills the tmpfs and makes the NEXT
+    startup hang forever.
     """
-    deadline = time.monotonic() + timeout
-    while game_running() and time.monotonic() < deadline:
-        # SIGKILL every time round: a game mid-teardown can ignore gentler
-        # signals, and freeskate refuses to stage while ANY copy is alive, so a
-        # half-dead process turns the next relaunch into a hard failure.
-        subprocess.run(["pkill", "-9", "-x", "skate3"], capture_output=True)
-        time.sleep(0.25)
-    if game_running():
+    if not proc.kill_game(timeout=timeout):
         raise LaunchError(
             "a previous Skate 3 process would not exit; kill it manually "
-            "(pkill -9 -x skate3) and try again"
+            "and try again"
         )
-    for leaked in Path("/dev/shm").glob("xenia_memory_*"):
-        try:
-            leaked.unlink()
-        except OSError:
-            pass
+    proc.clear_leaked_memory()
 
 
 # --------------------------------------------------------------------------
@@ -174,54 +149,17 @@ def kill_running_game(timeout: float = 10.0) -> None:
 DEFAULT_SETTLE_MS = 2500
 
 
-def stage(macro: str, settle_ms: int = DEFAULT_SETTLE_MS, delay_ms: int = 260) -> list[str]:
+def stage(macro: str, settle_ms: int = DEFAULT_SETTLE_MS, delay_ms: int = 260,
+          windowed: bool = False, binary: Path | None = None) -> list[str]:
     """Stage the scratch profile and return the argv freeskate would have run.
 
-    `--dry-run` is not a no-op: it performs the entire stage and only stops short
-    of spawning, printing each argv part indented under "launching:".
+    freeskate is vendored and called in-process (see loader/staging.py), so this
+    is `build_command()` itself rather than a parse of what it printed.
     """
-    if not config.FREESKATE_BIN.is_file():
-        raise LaunchError(f"freeskate not found at {config.FREESKATE_BIN}")
-
-    cmd = [
-        str(config.FREESKATE_BIN),
-        "play",
-        config.LOADER_PROFILE,
-        "--dry-run",
-        "--macro",
-        macro,
-        "--settle",
-        str(settle_ms),
-        "--delay",
-        str(delay_ms),
-    ]
-    result = subprocess.run(
-        cmd, cwd=config.FREESKATE_DIR, capture_output=True, text=True, timeout=600
-    )
-    stdout = ANSI.sub("", result.stdout)
-    if result.returncode != 0:
-        stderr = ANSI.sub("", result.stderr).strip()
-        raise LaunchError(f"staging failed ({result.returncode}): {stderr or stdout.strip()}")
-
-    argv = _parse_argv(stdout)
-    if not argv:
-        raise LaunchError(f"could not parse the launch command from freeskate output:\n{stdout}")
-    return argv
-
-
-def _parse_argv(stdout: str) -> list[str]:
-    argv: list[str] = []
-    collecting = False
-    for line in stdout.splitlines():
-        if line.strip().endswith("launching:"):
-            collecting = True
-            continue
-        if collecting:
-            if line.startswith("    ") and line.strip():
-                argv.append(line.strip())
-            elif argv:
-                break
-    return argv
+    try:
+        return staging.stage(macro, settle_ms, delay_ms, windowed=windowed, binary=binary)
+    except staging.StagingError as exc:
+        raise LaunchError(f"staging failed: {exc}") from exc
 
 
 # --------------------------------------------------------------------------
@@ -253,7 +191,8 @@ class Session:
                     self.process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
                     pass
-            except ProcessLookupError:
+            except OSError:
+                # ProcessLookupError on POSIX, a plain OSError on Windows.
                 pass
 
 
@@ -275,6 +214,38 @@ def _apply_overrides(argv: list[str], overrides: dict[str, str | None]) -> list[
     out.extend(f"--{key}={value}" for key, value in overrides.items()
                if value is not None)
     return out
+
+
+def child_env() -> dict[str, str]:
+    """The environment the GAME gets, scrubbed of everything the loader needs.
+
+    Frozen, the loader runs inside a PyInstaller bundle whose runtime hooks point
+    LD_LIBRARY_PATH, GI_TYPELIB_PATH, GDK_PIXBUF_MODULE_FILE, GIO_MODULE_DIR,
+    GTK_PATH and XDG_DATA_DIRS at its own private GTK stack. Handing that to the
+    engine makes it load OUR libstdc++ and OUR GTK, and the resulting undefined
+    symbol looks exactly like an engine regression. PyInstaller stashes the
+    original of each variable it overwrites in <NAME>_ORIG for precisely this.
+    """
+    env = dict(os.environ)
+    for name in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH"):
+        original = env.pop(f"{name}_ORIG", None)
+        if original:
+            env[name] = original
+        else:
+            env.pop(name, None)
+    for name in (
+        "GI_TYPELIB_PATH", "GDK_PIXBUF_MODULE_FILE", "GDK_PIXBUF_MODULEDIR",
+        "GIO_MODULE_DIR", "GTK_PATH", "GTK_DATA_PREFIX", "GTK_EXE_PREFIX",
+        "GSETTINGS_SCHEMA_DIR", "XDG_DATA_DIRS", "PANGO_LIBDIR",
+        "PANGO_SYSCONFDIR", "FONTCONFIG_PATH", "FONTCONFIG_FILE",
+    ):
+        env.pop(name, None)
+    if config.IS_LINUX:
+        # X11 rather than Wayland, so the loading screen's keep-above binds.
+        env["GDK_BACKEND"] = "x11"
+    else:
+        env.pop("GDK_BACKEND", None)
+    return env
 
 
 def launch(
@@ -310,7 +281,8 @@ def launch(
 
     # Start from a clean log so the watcher never reads a previous session's
     # milestones. freeskate rotates it during staging, so this must come after.
-    argv = stage(macro, settle_ms=settle_ms, delay_ms=delay_ms)
+    argv = stage(macro, settle_ms=settle_ms, delay_ms=delay_ms,
+                 windowed=windowed, binary=binary)
     argv[0] = str(binary)
 
     overrides = {
@@ -450,9 +422,7 @@ def launch(
     if log_file.exists():
         log_file.unlink()
 
-    env = dict(os.environ)
-    # X11 rather than Wayland, so the loading screen's keep-above actually binds.
-    env["GDK_BACKEND"] = "x11"
+    env = child_env()
 
     process = subprocess.Popen(argv, cwd=config.RUNTIME, env=env)
     _install_signal_forwarding(process)
@@ -539,7 +509,7 @@ def _install_signal_forwarding(process: subprocess.Popen) -> None:
     def forward(_signum, _frame):
         try:
             process.terminate()
-        except ProcessLookupError:
+        except OSError:
             pass
 
     for sig in (signal.SIGINT, signal.SIGTERM):
