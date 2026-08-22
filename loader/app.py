@@ -48,13 +48,22 @@ class LoaderApp(Gtk.Application):
         return 0
 
     def do_activate(self):
-        # No game files yet: the first thing the user sees is the setup screen,
-        # not a library of maps none of which could possibly load.
+        self._build()
+        # No game files yet: what the user SEES is the setup screen, not a
+        # library of maps none of which could possibly load. The wiring above is
+        # built either way - gating it too left `self.controller` as None on any
+        # machine without an install, which is every CI runner.
         if setup.needs_setup():
+            # LibraryWindow shows itself on construction (see the note about
+            # show_all in the README history), so it has to be told to go away.
+            self.library.hide()
             if self.setup_window is None:
                 self.setup_window = ui_setup.SetupWindow(self, on_done=self._on_setup_done)
             self.setup_window.present()
             return
+        self.library.present()
+
+    def _build(self):
         if self.library is None:
             self.library = ui_library.LibraryWindow(
                 self, on_play=self.play, on_import=self.import_pack
@@ -74,7 +83,6 @@ class LoaderApp(Gtk.Application):
             )
             if not ui_loading.ensure_x11():
                 self.library.set_status("not on X11 - loading screen may sit behind the game")
-        self.library.present()
 
     def _on_setup_done(self, game_root) -> None:
         """Game files are in place; retire the setup window and open the library."""
