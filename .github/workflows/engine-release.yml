@@ -1,0 +1,137 @@
+name: engine-release
+
+# THE ENGINE, BUILT ON YOUR OWN MACHINES.
+#
+# This cannot run on a GitHub-hosted runner: CMakeLists.txt recompiles the game
+# at BUILD time and needs game/default.xex, data/webkit/EAWebkit.xex and the TU3
+# package, none of which may leave your machines. So it runs on self-hosted
+# runners that already have them.
+#
+# SECURITY. This repository is public, and a public repository with self-hosted
+# runners is exactly the configuration GitHub warns about: a fork's pull request
+# would otherwise run its own code on your hardware. The guard that actually
+# holds is the trigger - workflow_dispatch requires write access, and a fork has
+# none. Everything else below is defence in depth. Never add pull_request here,
+# and above all never pull_request_target, which runs in the base-branch context
+# and ignores the fork-approval setting entirely.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload into (e.g. v0.1.0). The draft must exist."
+        required: true
+      platforms:
+        description: "Comma-separated: linux,windows,macos"
+        default: "linux,windows,macos"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.repository_owner == 'andrewnakas' && github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            key: linux
+            runner: [self-hosted, skate3-engine, Linux, X64]
+            preset: linux-release
+            shell: bash
+          - name: windows-x86_64
+            key: windows
+            runner: [self-hosted, skate3-engine, Windows, X64]
+            preset: windows-release
+            shell: bash
+          - name: macos-arm64
+            key: macos
+            runner: [self-hosted, skate3-engine, macOS, ARM64]
+            preset: macos-release
+            shell: bash
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - if: contains(inputs.platforms, matrix.key)
+        uses: actions/checkout@v5
+        with:
+          repository: andrewnakas/skate3recomp
+          ref: ${{ vars.ENGINE_REF || 'main' }}
+          submodules: recursive
+          # The ninja tree is incremental and outside the workspace, but a
+          # `git clean -ffdx` here would still throw away hours of codegen.
+          clean: false
+          # Do not leave a token sitting in .git/config on a personal machine.
+          persist-credentials: false
+
+      - name: Build
+        if: contains(inputs.platforms, matrix.key)
+        # SKATE3_GAME_DATA_ROOT and SKATE3_TITLE_UPDATE_PACKAGE come from the
+        # RUNNER's own .env file, not from repository secrets: secrets are
+        # readable by any workflow that gets merged, runner env only by a job
+        # that has already started on that machine.
+        run: |
+          set -eux
+          cmake --preset ${{ matrix.preset }} \
+                -DSKATE3_GAME_DATA_ROOT="$SKATE3_GAME_DATA_ROOT" \
+                -DSKATE3_TITLE_UPDATE_PACKAGE="$SKATE3_TITLE_UPDATE_PACKAGE"
+          cmake --build --preset ${{ matrix.preset }} --target generate-all --parallel
+          cmake --preset ${{ matrix.preset }} \
+                -DSKATE3_GAME_DATA_ROOT="$SKATE3_GAME_DATA_ROOT" \
+                -DSKATE3_TITLE_UPDATE_PACKAGE="$SKATE3_TITLE_UPDATE_PACKAGE"
+          cmake --build --preset ${{ matrix.preset }} --parallel
+
+      - name: Collect (allowlist only)
+        if: contains(inputs.platforms, matrix.key)
+        # AN ALLOWLIST, NOT A DIRECTORY. The build stages default.xexp and
+        # EAWebkit.xexp into $<TARGET_FILE_DIR:skate3>/game/ - retail-derived
+        # files. Archiving the build directory wholesale would publish them from
+        # a public repository. The assertion below is the backstop.
+        run: |
+          set -eux
+          OUT="out/build/${{ matrix.preset }}"
+          STAGE="$RUNNER_TEMP/engine-${{ matrix.name }}"
+          rm -rf "$STAGE" && mkdir -p "$STAGE"
+          case "${{ matrix.name }}" in
+            windows-*) cp "$OUT/skate3.exe" "$STAGE/"; cp "$OUT"/rexruntime.dll "$STAGE/" ;;
+            macos-*)   cp "$OUT/skate3" "$STAGE/"; cp "$OUT"/librexruntime.dylib "$STAGE/"
+                       cp "$OUT"/libMoltenVK.dylib "$STAGE/" || true
+                       cp "$OUT"/MoltenVK_icd.json "$STAGE/" || true
+                       codesign --force --sign - "$STAGE/skate3"
+                       codesign --force --sign - "$STAGE"/*.dylib ;;
+            linux-*)   cp "$OUT/skate3" "$STAGE/"; cp "$OUT"/librexruntime.so "$STAGE/" ;;
+          esac
+
+      - name: No game data may leave this machine
+        if: contains(inputs.platforms, matrix.key)
+        run: |
+          STAGE="$RUNNER_TEMP/engine-${{ matrix.name }}"
+          if find "$STAGE" \( -name '*.xex' -o -name '*.xexp' -o -name 'game' \) | grep -q .; then
+            echo "REFUSING: retail game data in the engine archive" >&2
+            find "$STAGE" \( -name '*.xex' -o -name '*.xexp' -o -name 'game' \) >&2
+            exit 1
+          fi
+          ls -la "$STAGE"
+
+      - name: Upload to the draft release
+        if: contains(inputs.platforms, matrix.key)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # gh rather than a third-party action: nothing outside GitHub's own
+        # tooling runs on these machines.
+        run: |
+          set -eux
+          TAG="${{ inputs.tag }}"
+          STAGE="$RUNNER_TEMP/engine-${{ matrix.name }}"
+          NAME="skate3-engine-${TAG#v}-${{ matrix.name }}"
+          case "${{ matrix.name }}" in
+            linux-*) tar -C "$STAGE" -czf "$RUNNER_TEMP/$NAME.tar.gz" . ;;
+            *)       (cd "$STAGE" && zip -qr "$RUNNER_TEMP/$NAME.zip" .) ;;
+          esac
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$TAG" "$RUNNER_TEMP/$NAME".* --clobber --repo "$GITHUB_REPOSITORY"

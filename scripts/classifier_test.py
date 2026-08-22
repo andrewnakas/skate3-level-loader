@@ -7,7 +7,9 @@ an unbounded retry loop on a map that is simply broken. It is one line of code,
 which is exactly why it is worth pinning against real data rather than a
 hand-written fixture.
 
-The two properties that matter, checked against every log in `work/spots/`:
+The two properties that matter, checked against every log in `tests/corpus/`
+(a committed, verdict-equivalent distillation of the real run logs - see
+scripts/make_corpus.py; pass `--spots <dir>` to run against live logs instead):
 
   a broken map is never called loadable   - or a caller would trust a map that
                                             has never once rendered
@@ -18,16 +20,21 @@ Flakes in between are expected and are reported by name rather than asserted
 per-map, so a new one shows up as a new name instead of a red suite.
 
     python3 scripts/classifier_test.py
+    python3 scripts/classifier_test.py --spots work/spots    # a fresh sweep
 """
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loader import catalog, config, logwatch, spotcheck  # noqa: E402
+
+CORPUS = Path(__file__).resolve().parent.parent / "tests" / "corpus"
 
 results: list[tuple[str, bool, str]] = []
 
@@ -36,7 +43,13 @@ def check(name: str, ok: bool, detail: str = "") -> None:
     results.append((name, ok, detail))
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--spots", default=None,
+                        help="directory of run logs (default: the committed corpus)")
+    args = parser.parse_args(argv)
+    corpus = Path(args.spots) if args.spots else CORPUS
+
     # Synthetic cases first: the rule itself, independent of any log on disk.
     TAKE = "native-scene: taking over natively (997 items)"
     DONE = "Skate 3 demo path: gameplay input sequence complete"
@@ -64,11 +77,19 @@ def main() -> int:
                 for pack in catalog.load_all(config.CATALOG_DIR)
                 for entry in pack.maps}
 
-    logs = sorted((config.SPOTS_DIR).glob("s[0-9]__*.log"))
+    logs = sorted(corpus.glob("s[0-9]__*.log"))
     if not logs:
         check("found run logs to test against", False,
-              f"no s<N>__*.log in {config.SPOTS_DIR}")
+              f"no s<N>__*.log in {corpus}")
         return report()
+
+    # The corpus is committed, so its SIZE is an assertion too: a log quietly
+    # going missing would silently narrow every check below it.
+    manifest = corpus / "manifest.json"
+    if manifest.is_file():
+        expected = json.loads(manifest.read_text())["logs"]
+        check(f"corpus intact ({len(logs)} logs)", len(logs) == expected,
+              f"manifest says {expected}")
 
     seen: dict[str, set[str | None]] = {}
     for log in logs:
@@ -80,8 +101,8 @@ def main() -> int:
     #    back non-transient the rule would be telling a caller to trust a map
     #    that has never once rendered.
     stalls = [k for k, s in statuses.items() if s == "stalls" and k in seen]
-    check(f"{len(stalls)} known-broken maps' logs available", len(stalls) >= 10,
-          f"only {len(stalls)} found")
+    check(f"{len(stalls)} known-broken maps' logs available", bool(stalls),
+          "the corpus has no logs for any map recorded as stalls")
     for key in sorted(stalls):
         check(f"{key} (stalls) never looks loaded", None not in seen[key],
               f"got {seen[key]}")
@@ -89,8 +110,8 @@ def main() -> int:
     # 2. A working map must never be called permanently broken: at least one of
     #    its runs has to read as a real load, or the retry would be pointless.
     working = [k for k, s in statuses.items() if s == "boots" and k in seen]
-    check(f"{len(working)} working maps' logs available", len(working) >= 30,
-          f"only {len(working)} found")
+    check(f"{len(working)} working maps' logs available", bool(working),
+          "the corpus has no logs for any map recorded as boots")
     for key in sorted(working):
         check(f"{key} (boots) has a run that loaded", None in seen[key],
               f"got {seen[key]}")

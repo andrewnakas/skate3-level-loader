@@ -11,6 +11,28 @@ few engine-side patches (see [Engine changes](#engine-changes)).
 
 ---
 
+## Install
+
+Download the archive for your platform from the
+[releases page](https://github.com/andrewnakas/skate3-level-loader/releases) and
+unpack it. Each one carries the launcher and the patched engine; you supply the
+game files from your own copy of Skate 3, once, on first run.
+
+| | |
+|---|---|
+| **Linux** | `tar xzf skate3loader-*-linux-x86_64.tar.gz && ./skate3loader/skate3loader` |
+| **Windows** | unzip, run `skate3loader-gui.exe` (`skate3loader.exe` for the commands below) |
+| **macOS** | unzip, then `xattr -dr com.apple.quarantine "Skate 3 Level Loader.app"` |
+
+The macOS build is not notarized, so Gatekeeper blocks it until you either run
+that `xattr` line or use **System Settings → Privacy & Security → Open Anyway**.
+Sequoia removed the old Control-click shortcut.
+
+**First run** asks for your Skate 3 ISO and Title Update 3 package, then hands
+them to the game's own installer - the loader extracts nothing itself. If a
+Skate3Recomp install is already on the machine it offers that instead, and
+nothing is extracted twice.
+
 ## Quick start
 
 ```bash
@@ -32,6 +54,7 @@ you drop into the map with no menus. Quit the game and the library comes back.
 ./skate3loader play <world-id>     boot straight into one map, no GUI
 ./skate3loader run [world-id]      play, starting at the in-game map picker
 ./skate3loader manual <pack-id>    stage a pack, no automation — you navigate
+./skate3loader selftest           prove this build is intact (what CI runs)
 ```
 
 ---
@@ -202,7 +225,12 @@ python3 scripts/sweep_merge_test.py      # a --only re-run keeps the other resul
 loader/           the launcher
   app.py          GTK application and window flow
   session.py      launch -> watch -> hand over -> come back
-  launch.py       staging (delegates to freeskate) and process control
+  launch.py       spawning the game, and its scrubbed child environment
+  staging.py      content staging, via the vendored freeskate
+  setup.py        first run: the engine's own ISO installer, driven
+  proc.py         finding and killing the game on all three platforms
+  config.py       bundle / app / user-state paths, per platform
+  selftest.py     what CI runs to prove a build is intact
   catalog.py      packs and maps on disk, and their verified status
   navigate.py     the pad macro that reaches a map
   spotcheck.py    judging a screenshot
@@ -211,6 +239,8 @@ loader/           the launcher
 scripts/          tools: verifyspot, sweep, makeheader, capture, hashcheck, ...
 catalog/          one JSON per imported pack
 references/       confirmed screenshots, and known-bad ones in _wrong/
+tests/corpus/     distilled run logs, so classifier_test can run in CI
+packaging/        the PyInstaller spec and its runtime hook
 work/             test output (gitignored)
 ```
 
@@ -218,12 +248,45 @@ work/             test output (gitignored)
 
 ## Requirements
 
-- Linux, Python 3.11+, PyGObject (GTK 3), Pillow
-- [freeskate](../freeskate) for staging
-- A built `skate3recomp` binary
-- `xprop` for window capture; `unrar`/`7z` if you're extracting pack archives
+Running a **release build**: nothing but your own Skate 3 files. GTK, Python and
+the engine are all in the archive.
 
-`./skate3loader doctor` checks all of it.
+Running from a **checkout**: Python 3.11+, PyGObject (GTK 3), pycairo, psutil, and
+a built `skate3recomp` binary. `./skate3loader doctor` checks all of it.
+
+The test harness under `scripts/` additionally wants Pillow, `xprop`, and Linux -
+it drives X11 capture, `/dev/shm` and GNOME settings, and is deliberately left
+out of the packaged app.
+
+freeskate is **vendored** at `loader/vendor/freeskate.py` and called in-process,
+so no sibling checkout is needed. `scripts/vendor_check.py --against
+../freeskate/freeskate` catches the two copies drifting apart.
+
+## Building the release
+
+Three platforms, built by CI:
+
+```bash
+pyinstaller --noconfirm --clean packaging/skate3loader.spec   # locally, any platform
+```
+
+- `.github/workflows/ci.yml` — offline tests plus a GTK canary on all three OSes,
+  every push.
+- `.github/workflows/loader-release.yml` — the launcher, on GitHub-hosted runners.
+  Linux builds inside an `ubuntu:22.04` container so the glibc floor stays 2.35.
+- `.github/workflows/engine-release.yml` — the engine, on **self-hosted** runners,
+  because the build recompiles the game from a dump that cannot leave your
+  machines. `workflow_dispatch` only; read the security note at the top of that
+  file before making this repository public.
+
+Cut a release by making the draft first, letting each machine fill in its engine
+when it is free, then pushing the tag:
+
+```bash
+gh release create v0.1.0 --draft --notes-file NOTES.md
+gh workflow run engine-release.yml -f tag=v0.1.0 -f platforms=linux
+git push origin v0.1.0        # builds the loader and publishes
+```
 
 ---
 

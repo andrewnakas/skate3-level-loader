@@ -7,3 +7,8 @@ packs/
 
 __pycache__/
 *.pyc
+
+# PyInstaller
+build/
+dist/
+*.spec.bak

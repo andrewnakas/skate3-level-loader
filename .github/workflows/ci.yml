@@ -1,0 +1,89 @@
+name: ci
+
+# Hosted runners only, no secrets, read-only token. Nothing here may ever run on
+# the self-hosted machines that build the engine - see engine-release.yml.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    # The suite that needs no game and no display. loader.session imports GLib
+    # at module scope, so PyGObject has to be here even though nothing opens a
+    # window.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install GTK and psutil
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 python3-psutil
+      - name: Byte-compile everything
+        run: python3 -m compileall -q loader scripts
+      - name: Offline tests
+        run: |
+          set -e
+          python3 scripts/classifier_test.py
+          python3 scripts/gui_failure_test.py
+          python3 scripts/switch_request_test.py
+          python3 scripts/sweep_merge_test.py
+          python3 scripts/display_test.py
+      - name: Vendored freeskate matches its source
+        # Loud drift beats silent drift: the loader repo is freeskate's home now,
+        # and a hand-edit to one copy that never reached the other is exactly the
+        # class of bug this project keeps paying for.
+        run: python3 scripts/vendor_check.py
+
+  gtk-canary:
+    # Fifteen seconds, three platforms. MSYS2 and Homebrew are rolling; this is
+    # the tripwire that tells us they moved BEFORE a release build fails on it.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            shell: bash
+          - os: windows-2025
+            shell: 'msys2 {0}'
+          - os: macos-15
+            shell: bash
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-gi python3-cairo gir1.2-gtk-3.0
+
+      - if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-cairo
+            mingw-w64-ucrt-x86_64-gtk3
+
+      - if: runner.os == 'macOS'
+        shell: bash
+        run: brew install gtk+3 pygobject3 py3cairo
+
+      - name: Import the GTK stack
+        run: |
+          python3 -c "import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk, GdkPixbuf; import cairo; print('gtk', Gtk.get_major_version(), Gtk.get_minor_version())"
