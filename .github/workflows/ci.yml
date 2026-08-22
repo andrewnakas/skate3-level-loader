@@ -26,17 +26,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 python3-psutil
+            python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 python3-psutil xvfb
       - name: Byte-compile everything
         run: python3 -m compileall -q loader scripts
       - name: Offline tests
         run: |
           set -e
           python3 scripts/classifier_test.py
-          python3 scripts/gui_failure_test.py
           python3 scripts/switch_request_test.py
           python3 scripts/sweep_merge_test.py
           python3 scripts/display_test.py
+          # gui_failure_test drives a real Gtk.Application, so it wants a display
+          # even though it never shows a window. Xvfb rather than a stub: the
+          # paths it exercises are the launcher's own, and a stub would test
+          # something else.
+          xvfb-run -a python3 scripts/gui_failure_test.py
       - name: Vendored freeskate matches its source
         # Loud drift beats silent drift: the loader repo is freeskate's home now,
         # and a hand-edit to one copy that never reached the other is exactly the
