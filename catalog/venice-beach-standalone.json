@@ -1,0 +1,24 @@
+{
+  "id": "venice-beach-standalone",
+  "name": "Venice Beach (standalone)",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/VENICEBEACH/venicebeach_00000000.big",
+  "header": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/VENICEBEACH/venicebeach_00000000.header",
+  "package": "VENICEBEACH",
+  "maps": [
+    {
+      "world_id": "VeniceBeach",
+      "name": "VeniceBeach",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_venicebeach_venicebeach_Start"
+  ],
+  "boots_at_start": false
+}

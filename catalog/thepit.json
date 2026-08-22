@@ -1,0 +1,140 @@
+{
+  "id": "thepit",
+  "name": "The Pit",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/THEPIT/thepit_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/THEPIT/thepit_00000000.header",
+  "package": "THEPIT",
+  "maps": [
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (1)",
+      "sub_index": 1,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (10)",
+      "sub_index": 2,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (11)",
+      "sub_index": 3,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (12)",
+      "sub_index": 4,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (13)",
+      "sub_index": 5,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (14)",
+      "sub_index": 6,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (15)",
+      "sub_index": 7,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (16)",
+      "sub_index": 8,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (17)",
+      "sub_index": 9,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Checkpoint (18)",
+      "sub_index": 10,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ThePit",
+      "name": "ThePit - Startline",
+      "sub_index": 11,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_item": false,
+    "skate3_warp_substitute_folder": false,
+    "skate3_warp_substitute_slug": false,
+    "skate3_warp_substitute_node": false,
+    "skate3_warp_substitute_lookup": false
+  },
+  "spawn_nodes": [
+    "Z_thepit_checkpoint10_Start",
+    "Z_thepit_checkpoint11_Start",
+    "Z_thepit_checkpoint12_Start",
+    "Z_thepit_checkpoint13_Start",
+    "Z_thepit_checkpoint14_Start",
+    "Z_thepit_checkpoint15_Start",
+    "Z_thepit_checkpoint16_Start",
+    "Z_thepit_checkpoint17_Start",
+    "Z_thepit_checkpoint18_Start",
+    "Z_thepit_checkpoint1_Start",
+    "Z_thepit_checkpoint_Start",
+    "Z_thepit_startline_Start"
+  ],
+  "boots_at_start": false
+}

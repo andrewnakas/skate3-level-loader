@@ -1,0 +1,120 @@
+{
+  "id": "whistling",
+  "name": "Whistling",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/WHISTLING/whistling_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/WHISTLING/whistling_00000000.header",
+  "package": "WHISTLING",
+  "maps": [
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (1)",
+      "sub_index": 1,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (2)",
+      "sub_index": 2,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (3)",
+      "sub_index": 3,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (4)",
+      "sub_index": 4,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (5)",
+      "sub_index": 5,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Checkpoint (6)",
+      "sub_index": 6,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Solid1",
+      "sub_index": 7,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Start",
+      "sub_index": 8,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Whistling",
+      "name": "Whistling - Startline",
+      "sub_index": 9,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_item": false,
+    "skate3_warp_substitute_folder": false,
+    "skate3_warp_substitute_slug": false,
+    "skate3_warp_substitute_node": false,
+    "skate3_warp_substitute_lookup": false
+  },
+  "spawn_nodes": [
+    "Z_whistling_checkpoint1_Start",
+    "Z_whistling_checkpoint2_Start",
+    "Z_whistling_checkpoint3_Start",
+    "Z_whistling_checkpoint4_Start",
+    "Z_whistling_checkpoint5_Start",
+    "Z_whistling_checkpoint6_Start",
+    "Z_whistling_checkpoint_Start",
+    "Z_whistling_solid1_Start",
+    "Z_whistling_start_Start",
+    "Z_whistling_startline_Start"
+  ],
+  "boots_at_start": false
+}

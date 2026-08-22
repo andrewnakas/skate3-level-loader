@@ -1,0 +1,24 @@
+{
+  "id": "hastings-bowl-our-fat",
+  "name": "Hastings Bowl (our FAT)",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/HBREGEN/hastingsbowl_00000000.big",
+  "header": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/HBREGEN/hastingsbowl_00000000.header",
+  "package": "HBREGEN",
+  "maps": [
+    {
+      "world_id": "HastingsBowl",
+      "name": "Hastings Bowl",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_hastingsbowl_hastingsbowl_Start"
+  ],
+  "boots_at_start": false
+}

@@ -1,9 +1,9 @@
 {
   "id": "san-vanelona",
-  "name": "San Vanelona",
+  "name": "Simpsons Power Plant (PS3 to 360)",
   "kind": "big-dlc",
-  "big": "/home/nakas/Documents/skate3/packs/extracted/San Vanelona/San Vanelona/0000000000000000/454108E6/00000002/SANVANELONA/san_vanelona_00000000.big",
-  "header": "/home/nakas/Documents/skate3/packs/extracted/San Vanelona/San Vanelona/0000000000000000/454108E6/Headers/00000002/SANVANELONA.header",
+  "big": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/POWERPLANT/san_vanelona_00000000.big",
+  "header": "/home/nakas/Documents/skate3ps3torecompmap/work/packs/POWERPLANT/san_vanelona_00000000.header",
   "package": "SANVANELONA",
   "maps": [
     {

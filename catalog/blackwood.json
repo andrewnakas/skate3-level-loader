@@ -1,18 +1,18 @@
 {
-  "id": "hastingsbowl",
-  "name": "Hastingsbowl",
+  "id": "blackwood",
+  "name": "Blackwood DH",
   "kind": "big-dlc",
-  "big": "/home/nakas/Documents/skate3/packs/extracted/Hastings Bowl/Hastings Bowl/HASTINGSBOWL/hastingsbowl_00000000.big",
-  "header": "/home/nakas/Documents/skate3/packs/extracted/Hastings Bowl/Hastings Bowl/HASTINGSBOWL/hastingsbowl_00000000.header",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/BLACKWOODDH/hastingsbowl_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/BLACKWOODDH/hastingsbowl_00000000.header",
   "package": "HASTINGSBOWL",
   "maps": [
     {
       "world_id": "HastingsBowl",
-      "name": "Hastings Bowl",
+      "name": "Blackwood DH",
       "sub_index": 0,
-      "log_seen": true,
+      "log_seen": false,
       "spot_verified": false,
-      "status": "boots",
+      "status": "",
       "art": null
     }
   ],

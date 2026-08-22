@@ -1,0 +1,24 @@
+{
+  "id": "cellonbmx",
+  "name": "Cellonbmx",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/CELLONBMX/cellonbmx_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/CELLONBMX/cellonbmx_00000000.header",
+  "package": "CELLONBMX",
+  "maps": [
+    {
+      "world_id": "CellonBMX",
+      "name": "CellonBMX",
+      "sub_index": 0,
+      "log_seen": false,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {},
+  "spawn_nodes": [
+    "Z_cellonbmx_cellonbmx_Start"
+  ],
+  "boots_at_start": false
+}

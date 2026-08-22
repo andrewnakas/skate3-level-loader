@@ -1,0 +1,40 @@
+{
+  "id": "joyride",
+  "name": "Joyride",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/JOYRIDE/joyride_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/JOYRIDE/joyride_00000000.header",
+  "package": "JOYRIDE",
+  "maps": [
+    {
+      "world_id": "Joyride",
+      "name": "Joyride - Startline",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "Joyride",
+      "name": "Joyride - Startline 2",
+      "sub_index": 1,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_item": false,
+    "skate3_warp_substitute_folder": false,
+    "skate3_warp_substitute_slug": false,
+    "skate3_warp_substitute_node": false,
+    "skate3_warp_substitute_lookup": false
+  },
+  "spawn_nodes": [
+    "Z_joyride_startline2_Start",
+    "Z_joyride_startline_Start"
+  ],
+  "boots_at_start": false
+}

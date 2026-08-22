@@ -1,0 +1,30 @@
+{
+  "id": "airborne",
+  "name": "Airborne Alley",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/AIRBORNEALLEY/hastingsbowl_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/AIRBORNEALLEY/hastingsbowl_00000000.header",
+  "package": "HASTINGSBOWL",
+  "maps": [
+    {
+      "world_id": "HastingsBowl",
+      "name": "Airborne Alley",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_item": false,
+    "skate3_warp_substitute_folder": false,
+    "skate3_warp_substitute_slug": false,
+    "skate3_warp_substitute_node": false,
+    "skate3_warp_substitute_lookup": false
+  },
+  "spawn_nodes": [
+    "Z_hastingsbowl_hastingsbowl_Start"
+  ],
+  "boots_at_start": false
+}

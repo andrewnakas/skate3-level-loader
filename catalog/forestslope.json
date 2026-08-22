@@ -1,0 +1,60 @@
+{
+  "id": "forestslope",
+  "name": "Forestslope",
+  "kind": "big-dlc",
+  "big": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/FORESTSLOPE/forestslope_00000000.big",
+  "header": "/home/nakas/Documents/decendersmaptoskate3recomp/work/packs/FORESTSLOPE/forestslope_00000000.header",
+  "package": "FORESTSLOPE",
+  "maps": [
+    {
+      "world_id": "ForestSlope",
+      "name": "ForestSlope - Cylinder",
+      "sub_index": 0,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ForestSlope",
+      "name": "ForestSlope - Cylinder.001",
+      "sub_index": 1,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ForestSlope",
+      "name": "ForestSlope - Plane",
+      "sub_index": 2,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    },
+    {
+      "world_id": "ForestSlope",
+      "name": "ForestSlope - Start",
+      "sub_index": 3,
+      "log_seen": true,
+      "spot_verified": false,
+      "status": "",
+      "art": null
+    }
+  ],
+  "settings": {
+    "skate3_warp_substitute_item": false,
+    "skate3_warp_substitute_folder": false,
+    "skate3_warp_substitute_slug": false,
+    "skate3_warp_substitute_node": false,
+    "skate3_warp_substitute_lookup": false
+  },
+  "spawn_nodes": [
+    "Z_forestslope_cylinder001_Start",
+    "Z_forestslope_cylinder_Start",
+    "Z_forestslope_plane_Start",
+    "Z_forestslope_start_Start"
+  ],
+  "boots_at_start": false
+}
