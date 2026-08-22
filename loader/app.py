@@ -120,6 +120,18 @@ class LoaderApp(Gtk.Application):
                 "tested-and-broken maps anyway.",
             )
             return
+        # A shipped catalog record carries curation, not the pack file itself.
+        # Launching would fail deep inside staging with "dlc package not found";
+        # say it here, where the user can act on it.
+        if not pack.located:
+            self.library.show_error(
+                f"{pack.name} is not on this machine",
+                "The launcher knows this pack - its maps, which of them load - "
+                "but not where your copy of the file is. Use "
+                "\u201cLocate pack file\u2026\u201d on the pack heading to point it at "
+                "your .big, or import the pack from scratch.",
+            )
+            return
         windowed = self.library.windowed_toggle.get_active()
         self.library.set_status("")
         self.hold()

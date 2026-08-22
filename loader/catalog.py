@@ -103,6 +103,37 @@ class Pack:
     # (3/3, full 160 s timeout); with no macro it is on screen in 11 s.
     boots_at_start: bool = False
 
+    @property
+    def source_paths(self) -> list[str]:
+        """The files this pack needs on disk to stage: the .big and its header."""
+        return [path for path in (self.big, self.header) if path]
+
+    @property
+    def located(self) -> bool:
+        """Whether this pack's files are where the record says they are.
+
+        A catalog record is curation - map names, world ids, spawn nodes, and
+        whether each map is known to load - plus a POINTER to a file on the
+        machine that imported it. The shipped catalog carries the curation with
+        the pointers stripped, so a fresh install knows what Skate It is without
+        pretending to have it. `relocate()` fills the pointer back in.
+        """
+        return bool(self.big) and all(Path(p).expanduser().is_file()
+                                      for p in self.source_paths)
+
+    def relocate(self, big: Path) -> None:
+        """Point this record at a copy of the pack found on THIS machine.
+
+        The header is taken from beside the .big when it is there, which is how
+        every pack that ships one is laid out.
+        """
+        big = Path(big).expanduser()
+        if not big.is_file():
+            raise ImportError_(f"no such file: {big}")
+        self.big = str(big)
+        sibling = big.with_suffix(".header")
+        self.header = str(sibling) if sibling.is_file() else ""
+
     def map_by_world(self, world_id: str) -> MapEntry | None:
         want = bigscan.normalize(world_id)
         for entry in self.maps:

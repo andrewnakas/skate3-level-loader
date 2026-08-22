@@ -70,6 +70,18 @@ you drop into the map with no menus. Quit the game and the library comes back.
 
 ---
 
+## The maps the launcher already knows about
+
+A release ships the **catalog** but not the packs: 43 packs and 134 maps, with
+their world ids, spawn nodes and - for the ones that have been through the
+sweep - whether they load or hang. What it cannot ship is the pack files
+themselves, so those records arrive with no path and the library shows
+**FILE MISSING** with a **Locate pack file…** button on the pack heading. Point
+it at your own copy and the record is complete.
+
+That split is deliberate: the curation took 120 test runs to establish and is
+worth having on a fresh install; the file paths belonged to one machine.
+
 ## Adding maps
 
 Drop your downloaded packs in a folder and point `scan` at it:

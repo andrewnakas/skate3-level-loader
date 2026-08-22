@@ -50,7 +50,17 @@ PREFIX = gtk_prefix()
 
 # -- data ------------------------------------------------------------------
 
-datas = [(str(ROOT / "catalog"), "catalog")]
+# The catalog that ships is the curation with the machine-local file pointers
+# stripped out - see packaging/make_seed_catalog.py. Generated here rather than
+# committed so it cannot drift from the real catalog.
+sys.path.insert(0, str(ROOT / "packaging"))
+import make_seed_catalog  # noqa: E402
+
+SEED = Path(os.environ.get("SKATE3_SEED_DIR", ROOT / "build" / "seed-catalog"))
+_packs, _stripped = make_seed_catalog.build(ROOT / "catalog", SEED)
+print(f"seed catalog: {_packs} packs, {_stripped} machine-local paths stripped")
+
+datas = [(str(SEED), "catalog")]
 
 # GSettings schemas. No PyInstaller hook collects these on ANY platform, and
 # without them Gtk.FileChooserDialog aborts the process (a g_error, uncatchable)

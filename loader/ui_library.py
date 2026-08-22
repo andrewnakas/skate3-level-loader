@@ -72,7 +72,8 @@ class MapCard(Gtk.Button):
         title.set_ellipsize(Pango.EllipsizeMode.END)
         note = Gtk.Label(
             xalign=0,
-            label=("WON'T LOAD" if entry.status == "stalls"
+            label=("FILE MISSING" if not pack.located
+                   else "WON'T LOAD" if entry.status == "stalls"
                    else "CONFIRMED" if entry.spot_verified
                    else pack.name.upper()),
         )
@@ -89,6 +90,8 @@ class MapCard(Gtk.Button):
                else "\nseen streaming" if entry.log_seen else "")
             + ("\nthis pack never reaches gameplay - tested, it hangs at the "
                "title screen" if entry.status == "stalls" else "")
+            + ("\nthe pack file is not on this machine - use Locate on the "
+               "pack heading" if not pack.located else "")
         )
 
 
@@ -219,6 +222,11 @@ class LibraryWindow(Gtk.ApplicationWindow):
         count.get_style_context().add_class("pack-count")
         count.set_valign(Gtk.Align.CENTER)
         head_row.pack_start(count, False, False, 0)
+        if not pack.located:
+            locate = Gtk.Button(label="Locate pack file…")
+            locate.set_valign(Gtk.Align.CENTER)
+            locate.connect("clicked", self._on_locate_clicked, pack)
+            head_row.pack_end(locate, False, False, 0)
         box.add(head_row)
 
         flow = Gtk.FlowBox()
@@ -237,6 +245,38 @@ class LibraryWindow(Gtk.ApplicationWindow):
 
     def set_status(self, text: str) -> None:
         self.status.set_text(text)
+
+    def _on_locate_clicked(self, _button, pack) -> None:
+        """Point a shipped catalog record at this machine's copy of the pack.
+
+        The catalog that ships with a release carries the curation - names,
+        world ids, spawn nodes, which maps are known to load - with the file
+        paths stripped, because those pointed at the machine that did the
+        importing. This is how a user supplies their own copy.
+        """
+        dialog = Gtk.FileChooserDialog(
+            title=f"Where is {pack.name}?",
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Use this", Gtk.ResponseType.ACCEPT)
+        pattern = Gtk.FileFilter()
+        pattern.set_name("Map packs (*.big)")
+        pattern.add_pattern("*.big")
+        dialog.add_filter(pattern)
+        response = dialog.run()
+        chosen = dialog.get_filename() if response == Gtk.ResponseType.ACCEPT else None
+        dialog.destroy()
+        if not chosen:
+            return
+        try:
+            pack.relocate(Path(chosen))
+            catalog.save(pack, config.CATALOG_DIR)
+        except Exception as exc:  # noqa: BLE001
+            self.show_error(f"Could not use that file for {pack.name}", str(exc))
+            return
+        self.set_status(f"{pack.name}: using {chosen}")
+        self.reload()
 
     def _on_import_clicked(self, _button) -> None:
         dialog = Gtk.FileChooserDialog(
