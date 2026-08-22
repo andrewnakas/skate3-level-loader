@@ -202,7 +202,7 @@ jobs:
 
       - name: The tag must agree with the source
         run: |
-          VERSION="$(python3 -c 'import re,pathlib; print(re.search(r"\"(.*)\"", pathlib.Path("loader/_version.py").read_text()).group(1))')"
+          VERSION="$(python3 scripts/version.py)"
           test "v$VERSION" = "$TAG" || {
             echo "tag $TAG does not match loader/_version.py ($VERSION)" >&2
             exit 1
