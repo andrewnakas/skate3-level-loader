@@ -117,7 +117,11 @@ jobs:
           GI_DIR="$(brew list pygobject3 | grep -m1 '/gi/__init__.py$')"
           PYVER="$(echo "$GI_DIR" | grep -o 'python3\.[0-9]*' | head -1)"
           echo "pygobject3 is built for $PYVER ($GI_DIR)"
-          PY="$(brew --prefix "$PYVER")/bin/$PYVER"
+          # The interpreter is linked into Homebrew's own bin as python3.X. Do
+          # not go via `brew --prefix python3.14` - the FORMULA is python@3.14,
+          # and that mismatch is a whole build for nothing.
+          PY="$(brew --prefix)/bin/$PYVER"
+          test -x "$PY" || PY="$(brew --prefix "python@${PYVER#python}")/bin/$PYVER"
           "$PY" -m venv --system-site-packages .venv
           .venv/bin/pip install -q pyinstaller==6.22.2 psutil
           export SKATE3_GTK_PREFIX="$(brew --prefix)"
