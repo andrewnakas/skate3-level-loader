@@ -170,8 +170,15 @@ class LibraryWindow(Gtk.ApplicationWindow):
         packs = catalog.load_all(config.CATALOG_DIR)
         if not packs:
             self.body.add(self._empty_state())
+        # Packs whose file is on THIS machine come first: that is what the user
+        # can actually click. The rest are catalog entries the launcher knows
+        # about and cannot start, and burying them under everything playable is
+        # the difference between a library and a wall of dead cards.
+        here = [p for p in packs if p.located]
+        elsewhere = [p for p in packs if not p.located]
+
         shown = 0
-        for pack in packs:
+        for pack in here:
             entries = self.visible_maps(pack)
             # A pack with nothing playable left is dropped whole, heading and
             # all - an empty section under a pack name reads as a bug.
@@ -179,10 +186,59 @@ class LibraryWindow(Gtk.ApplicationWindow):
                 continue
             shown += len(entries)
             self.body.add(self._pack_section(pack, entries))
-        hidden = sum(len(p.maps) for p in packs) - shown
+
+        if elsewhere:
+            # Open only when there is nothing else to look at. With maps ready
+            # to play, this is a footnote; with none, it IS the screen.
+            self.body.add(self._missing_section(elsewhere, expanded=not shown))
+
+        hidden = sum(len(p.maps) for p in here) - shown
+        # Count what is PLAYABLE NOW. Counting every record made a fresh install
+        # claim "121 playable" while not one of them had a file to stage.
+        parts = [f"{shown} playable"]
         if hidden and not self.show_broken.get_active():
-            self.set_status(f"{shown} playable · {hidden} hidden (won't load)")
+            parts.append(f"{hidden} hidden (won't load)")
+        if elsewhere:
+            parts.append(f"{len(elsewhere)} packs need their file")
+        self.set_status(" · ".join(parts))
         self.body.show_all()
+        # show_all() expands an Expander, so the collapse has to come after it.
+        if getattr(self, "_collapse_after_show", None) is not None:
+            self._collapse_after_show.set_expanded(False)
+            self._collapse_after_show = None
+
+    def _missing_section(self, packs: list, expanded: bool = False) -> Gtk.Widget:
+        """The packs the launcher knows about but cannot find on this machine.
+
+        One expander, not 43 dead rows. Everything in here is curation shipped
+        with the release - names, maps, which of them load - waiting for the
+        user to supply their own copy of the pack.
+        """
+        maps = sum(len(p.maps) for p in packs)
+        expander = Gtk.Expander(
+            label=f"{len(packs)} more packs the launcher knows about "
+                  f"({maps} maps) - locate a file to enable one"
+        )
+        expander.set_margin_top(18)
+        self._collapse_after_show = None if expanded else expander
+
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        inner.set_margin_top(10)
+        inner.set_margin_start(8)
+        for pack in packs:
+            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            name = Gtk.Label(xalign=0, label=pack.name)
+            name.get_style_context().add_class("card-title")
+            row.pack_start(name, True, True, 0)
+            count = Gtk.Label(xalign=0, label=f"{len(pack.maps)} maps")
+            count.get_style_context().add_class("pack-count")
+            row.pack_start(count, False, False, 0)
+            locate = Gtk.Button(label="Locate…")
+            locate.connect("clicked", self._on_locate_clicked, pack)
+            row.pack_start(locate, False, False, 0)
+            inner.add(row)
+        expander.add(inner)
+        return expander
 
     def _empty_state(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

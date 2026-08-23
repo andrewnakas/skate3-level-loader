@@ -91,11 +91,13 @@ class SetupWindow(Gtk.ApplicationWindow):
                 box.pack_start(row, False, False, 0)
 
         # -- the ISO path ---------------------------------------------------
-        box.pack_start(_heading("or extract from your disc image"), False, False, 8)
+        box.pack_start(_heading("or extract from your disc image" if found
+                                else "extract from your disc image"), False, False, 8)
         self.iso_row, self.iso_label = self._chooser_row(
             box, "Skate 3 ISO", self._on_pick_iso)
         self.tu_row, self.tu_label = self._chooser_row(
-            box, "Title Update 3 package (optional)", self._on_pick_tu)
+            box, "Title Update 3 package - the TU_… file from your console update",
+            self._on_pick_tu)
 
         self.install_button = Gtk.Button(label="Extract game files")
         self.install_button.set_sensitive(False)
@@ -114,6 +116,17 @@ class SetupWindow(Gtk.ApplicationWindow):
         self.error = Gtk.Label(label="", xalign=0.0, wrap=True)
         self.error.get_style_context().add_class("setup-error")
         box.pack_start(self.error, False, False, 0)
+
+        from . import config
+
+        if not config.default_binary().is_file():
+            self.install_button.set_sensitive(False)
+            self.error.set_text(
+                "No game engine found. The launcher drives a patched build of "
+                "skate3recomp: unpack the engine archive into a folder named "
+                f"\u201cengine\u201d beside the launcher ({config.app_dir()}), then "
+                "reopen this window."
+            )
 
         # Showing a CHILD does not show its ancestors - the library window came
         # up empty for two days over exactly this.
