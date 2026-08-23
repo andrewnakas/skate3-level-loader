@@ -118,6 +118,10 @@ class Pack:
         the pointers stripped, so a fresh install knows what Skate It is without
         pretending to have it. `relocate()` fills the pointer back in.
         """
+        if self.kind in ("stock-game", "stock"):
+            # Nothing to locate: the base game and the official DLC are already
+            # under the game data root the setup screen established.
+            return True
         return bool(self.big) and all(Path(p).expanduser().is_file()
                                       for p in self.source_paths)
 
@@ -617,6 +621,10 @@ def _carry_over(pack: "Pack", catalog_dir: Path) -> None:
             entry.log_seen = entry.log_seen or previous.log_seen
             entry.spot_verified = entry.spot_verified or previous.spot_verified
             entry.art = entry.art or previous.art
+            # `status` is the verdict of a sweep - boots, or tested and hangs.
+            # A scan cannot re-derive it, and dropping a pack the launcher
+            # already knows about must not throw it away.
+            entry.status = entry.status or previous.status
     if not pack.settings:
         pack.settings = existing.settings
     # Established by RUNNING the game, so a rescan can never re-derive it:
@@ -633,6 +641,31 @@ def _carry_over(pack: "Pack", catalog_dir: Path) -> None:
         pack.big = existing.big
         pack.header = existing.header
         pack.package = existing.package
+
+
+#: The id reserved for the game as it ships, with no custom content staged.
+STOCK_ID = "skate3"
+
+
+def stock_pack() -> Pack:
+    """Skate 3 itself: no DLC staged, no menu automation, no warp.
+
+    The launcher exists to load custom maps, but the first thing anyone with a
+    fresh install can do - and the only thing they can do before they have a
+    single pack - is play the game. It is a Pack so that every code path that
+    already handles packs (the profile writer, the session, the picker) handles
+    it without a special case at every level.
+    """
+    return Pack(
+        id=STOCK_ID,
+        name="Skate 3",
+        kind="stock-game",
+        big="",
+        maps=[MapEntry(world_id=STOCK_ID, name="Port Carverton", sub_index=0,
+                       status="boots")],
+        # It boots into its own world; driving the menu would navigate away.
+        boots_at_start=True,
+    )
 
 
 def load_all(catalog_dir: Path) -> list[Pack]:

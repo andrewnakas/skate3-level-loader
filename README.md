@@ -70,14 +70,25 @@ you drop into the map with no menus. Quit the game and the library comes back.
 
 ---
 
+## Getting maps in
+
+Drag a `.big` onto the window — or a whole folder of them — and it is installed.
+That is the whole flow; `Import pack…` in the header does the same thing with a
+file chooser, and `skate3loader scan ~/Downloads` does it from a terminal.
+
+The launcher ships knowing **43 packs by name**, including which of their maps
+load and which hang, but not the pack files themselves — those are not ours to
+distribute. Nothing you cannot play is shown, so a fresh install is just the
+game plus a place to drop things. Drop a pack it already knows and it arrives
+complete, tested status and all.
+
 ## The maps the launcher already knows about
 
 A release ships the **catalog** but not the packs: 43 packs and 134 maps, with
 their world ids, spawn nodes and - for the ones that have been through the
-sweep - whether they load or hang. What it cannot ship is the pack files
-themselves, so those records arrive with no path and the library shows
-**FILE MISSING** with a **Locate pack file…** button on the pack heading. Point
-it at your own copy and the record is complete.
+sweep - whether they load or hang. Records with no file on this machine are not
+displayed at all; they are memory, waiting for the matching `.big` to be dropped
+in. `Locate pack file…` appears on a pack heading if one goes missing later.
 
 That split is deliberate: the curation took 120 test runs to establish and is
 worth having on a fresh install; the file paths belonged to one machine.

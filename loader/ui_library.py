@@ -16,7 +16,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
-from . import art, catalog, config  # noqa: E402
+from . import art, catalog, config, discover  # noqa: E402
 
 CARD_WIDTH = 240
 CARD_HEIGHT = 135
@@ -145,6 +145,12 @@ class LibraryWindow(Gtk.ApplicationWindow):
         scroller.add(self.body)
         self.add(scroller)
 
+        # Drag and drop: the whole window is the drop target, because aiming at
+        # a particular strip of it is work the user should not have to do.
+        self.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
+        self.drag_dest_add_uri_targets()
+        self.connect("drag-data-received", self._on_drop)
+
         self.reload()
         # Show the whole tree, not just the cards. reload() below calls
         # show_all() on `body`, which shows the cards and everything under them
@@ -170,12 +176,19 @@ class LibraryWindow(Gtk.ApplicationWindow):
         packs = catalog.load_all(config.CATALOG_DIR)
         if not packs:
             self.body.add(self._empty_state())
-        # Packs whose file is on THIS machine come first: that is what the user
-        # can actually click. The rest are catalog entries the launcher knows
-        # about and cannot start, and burying them under everything playable is
-        # the difference between a library and a wall of dead cards.
+        # Only packs whose file is on THIS machine are shown. The rest stay in
+        # the catalog - the launcher remembers their maps, their world ids and
+        # which of them load, so dropping the file in later restores all of it -
+        # but a card you cannot click is not a library, it is a list of
+        # disappointments.
         here = [p for p in packs if p.located]
         elsewhere = [p for p in packs if not p.located]
+
+        # The base game always leads. On a fresh install it is the only thing
+        # anyone can do, and it is what makes the launcher useful before a
+        # single pack has been imported.
+        self.body.add(self._pack_section(catalog.stock_pack(),
+                                         catalog.stock_pack().maps))
 
         shown = 0
         for pack in here:
@@ -187,19 +200,15 @@ class LibraryWindow(Gtk.ApplicationWindow):
             shown += len(entries)
             self.body.add(self._pack_section(pack, entries))
 
-        if elsewhere:
-            # Open only when there is nothing else to look at. With maps ready
-            # to play, this is a footnote; with none, it IS the screen.
-            self.body.add(self._missing_section(elsewhere, expanded=not shown))
+        if not shown:
+            self.body.add(self._drop_hint(len(elsewhere)))
 
         hidden = sum(len(p.maps) for p in here) - shown
         # Count what is PLAYABLE NOW. Counting every record made a fresh install
         # claim "121 playable" while not one of them had a file to stage.
-        parts = [f"{shown} playable"]
+        parts = [f"{shown} custom map{'' if shown == 1 else 's'}"] if shown else []
         if hidden and not self.show_broken.get_active():
             parts.append(f"{hidden} hidden (won't load)")
-        if elsewhere:
-            parts.append(f"{len(elsewhere)} packs need their file")
         self.set_status(" · ".join(parts))
         self.body.show_all()
         # show_all() expands an Expander, so the collapse has to come after it.
@@ -207,38 +216,41 @@ class LibraryWindow(Gtk.ApplicationWindow):
             self._collapse_after_show.set_expanded(False)
             self._collapse_after_show = None
 
-    def _missing_section(self, packs: list, expanded: bool = False) -> Gtk.Widget:
-        """The packs the launcher knows about but cannot find on this machine.
+    def _drop_hint(self, known: int) -> Gtk.Widget:
+        """What to do next, when there is nothing but the game itself.
 
-        One expander, not 43 dead rows. Everything in here is curation shipped
-        with the release - names, maps, which of them load - waiting for the
-        user to supply their own copy of the pack.
+        This replaces a list of packs the launcher could not start. The
+        catalog still remembers them - drop the matching file and the pack
+        comes back with its maps, its world ids and its tested status intact.
         """
-        maps = sum(len(p.maps) for p in packs)
-        expander = Gtk.Expander(
-            label=f"{len(packs)} more packs the launcher knows about "
-                  f"({maps} maps) - locate a file to enable one"
-        )
-        expander.set_margin_top(18)
-        self._collapse_after_show = None if expanded else expander
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_top(48)
+        box.set_halign(Gtk.Align.CENTER)
 
-        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        inner.set_margin_top(10)
-        inner.set_margin_start(8)
-        for pack in packs:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            name = Gtk.Label(xalign=0, label=pack.name)
-            name.get_style_context().add_class("card-title")
-            row.pack_start(name, True, True, 0)
-            count = Gtk.Label(xalign=0, label=f"{len(pack.maps)} maps")
-            count.get_style_context().add_class("pack-count")
-            row.pack_start(count, False, False, 0)
-            locate = Gtk.Button(label="Locate…")
-            locate.connect("clicked", self._on_locate_clicked, pack)
-            row.pack_start(locate, False, False, 0)
-            inner.add(row)
-        expander.add(inner)
-        return expander
+        title = Gtk.Label()
+        title.set_markup('<span size="large" weight="bold">Drop a map pack here</span>')
+        box.add(title)
+
+        detail = Gtk.Label(justify=Gtk.Justification.CENTER, wrap=True)
+        detail.set_max_width_chars(60)
+        detail.set_text(
+            "Drag a .big file - or a folder of them - onto this window and it "
+            "is installed. Everything else on this screen stays playable while "
+            "you do."
+        )
+        detail.get_style_context().add_class("pack-count")
+        box.add(detail)
+
+        if known:
+            memory = Gtk.Label(justify=Gtk.Justification.CENTER, wrap=True)
+            memory.set_max_width_chars(60)
+            memory.set_text(
+                f"The launcher already knows {known} packs by name, including "
+                "which of their maps load. Drop one in and it arrives complete."
+            )
+            memory.get_style_context().add_class("pack-count")
+            box.add(memory)
+        return box
 
     def _empty_state(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -301,6 +313,57 @@ class LibraryWindow(Gtk.ApplicationWindow):
 
     def set_status(self, text: str) -> None:
         self.status.set_text(text)
+
+    # -- drag and drop -----------------------------------------------------
+
+    def _on_drop(self, _widget, _context, _x, _y, data, _info, _time) -> None:
+        """Install whatever was dropped: .big files, or folders of them.
+
+        A folder goes through the same directory scan as `skate3loader scan`,
+        which explains every rejection rather than skipping silently - dropping
+        a folder of downloads and being told nothing happened would be worse
+        than not accepting folders at all.
+        """
+        paths = []
+        for uri in data.get_uris():
+            try:
+                paths.append(Path(GLib.filename_from_uri(uri)[0]))
+            except Exception:  # noqa: BLE001 - a non-file URI is just not for us
+                continue
+        if not paths:
+            return
+        self.set_status(f"installing {len(paths)} item(s)…")
+        # Let the status line paint before the scan blocks the loop: a 292 MB
+        # container takes ~12 s to read its location list.
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
+
+        installed, failures = [], []
+        for path in paths:
+            try:
+                if path.is_dir():
+                    results = discover.import_directory(path)
+                    installed += [r for r in results if r.kind == "imported"]
+                    failures += [(r.path.name, r.detail) for r in results
+                                 if r.kind != "imported"]
+                else:
+                    pack = catalog.import_pack(path, config.CATALOG_DIR)
+                    installed.append(pack)
+            except Exception as exc:  # noqa: BLE001 - reported, never raised at a user
+                failures.append((path.name, str(exc)))
+
+        self.reload()
+        if installed and not failures:
+            self.set_status(f"installed {len(installed)} pack(s)")
+        elif installed:
+            self.set_status(f"installed {len(installed)}, {len(failures)} skipped")
+        if failures and not installed:
+            first, detail = failures[0]
+            self.show_error(
+                f"Could not install {first}",
+                detail + ("" if len(failures) == 1 else
+                          f"\n\n{len(failures) - 1} other item(s) were skipped too."),
+            )
 
     def _on_locate_clicked(self, _button, pack) -> None:
         """Point a shipped catalog record at this machine's copy of the pack.

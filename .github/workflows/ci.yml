@@ -41,6 +41,7 @@ jobs:
           # paths it exercises are the launcher's own, and a stub would test
           # something else.
           xvfb-run -a python3 scripts/gui_failure_test.py
+          xvfb-run -a python3 scripts/drop_test.py
       - name: Vendored freeskate matches its source
         # Loud drift beats silent drift: the loader repo is freeskate's home now,
         # and a hand-edit to one copy that never reached the other is exactly the

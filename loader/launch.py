@@ -59,7 +59,12 @@ def write_profile(pack: Pack, entry: MapEntry) -> Path:
         f"enabled = {'true' if pack.kind == 'stock' else 'false'}",
     ]
 
-    if pack.kind == "stock":
+    if pack.kind == "stock-game":
+        # The game as it ships: nothing staged beside it at all. Not even the
+        # official DLC, which is what `stock` means and which drags the boot
+        # content scan back in.
+        lines += [""]
+    elif pack.kind == "stock":
         # Already installed under the real user root; freeskate mirrors that
         # subtree into the staged tree. Nothing to drop in or hand-place.
         lines += [""]
@@ -87,7 +92,7 @@ def write_profile(pack: Pack, entry: MapEntry) -> Path:
         "# After detecting new content the game relaunches itself asking for the",
         "# retail executable name; alias it so the relaunch resolves.",
         "[[game_files]]",
-        f"source = {_toml_value(str(config.INSTALL / 'game' / 'default.xex'))}",
+        f"source = {_toml_value(str(config.game_data_root() / 'default.xex'))}",
         "target = 'sk83_na_f.xex'",
         "",
         "[launch]",
