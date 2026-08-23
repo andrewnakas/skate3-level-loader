@@ -147,11 +147,19 @@ def kill_running_game(timeout: float = 10.0) -> None:
 # --------------------------------------------------------------------------
 
 
-# 2500 ms, and do not trim it. The short settles (700 -> 400) were justified by
-# the loader reporting LANDED, which is inferred from STREAM lines and is true
-# whatever the menu does - see the note in navigate.py. Verified by screenshot:
-# at 2500 ms, requesting Spillway puts you in Spillway, twice running.
-DEFAULT_SETTLE_MS = 2500
+# 800 ms (2026-08-23), down from 2500. The old comment here said "do not trim
+# it", and it was right at the time: the settle is how long the macro waits for
+# gameplay to start taking input, the game accepts it at different moments on
+# different maps, and a press that lands early is simply lost.
+#
+# What changed is that the opening press is no longer a guess. The engine's
+# `skate3_demo_path_confirm_pause` re-presses `start` until the frontend stack
+# actually reads 56 (pause root), so an early press self-corrects instead of
+# ruining the run. Verified by screenshot at 800 ms: Maloof 3/3 against its
+# reference, GTA Rot identical to its 2500 ms landing.
+#
+# Raise it with SKATE3LOADER_SETTLE_MS on a slow machine.
+DEFAULT_SETTLE_MS = int(os.environ.get("SKATE3LOADER_SETTLE_MS", 800))
 
 
 def stage(macro: str, settle_ms: int = DEFAULT_SETTLE_MS, delay_ms: int = 260,

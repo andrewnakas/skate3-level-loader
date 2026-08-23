@@ -36,6 +36,7 @@ still lands the right map on its own.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 # The tokens skate3_demo_path.cpp accepts. An unknown token does not get skipped
@@ -89,8 +90,32 @@ VALID_TOKENS = {
 # 128 MB guest heap across every press turns up only animation. This build
 # also never draws the menus to the framebuffer, so a screenshot cannot see the
 # tab either. See scripts/tabprobe.py and scripts/tabscan.py.
-TAB_PRESSES = 10
-TAB_DELAY_MS = 1500
+#
+# The delay is an EXPERIMENT KNOB (SKATE3LOADER_TAB_DELAY_MS) because it is the
+# single largest slice of the menu phase - ten presses at 1500 ms is 15 s on
+# every custom map - and the only honest way to shorten it is to try a value and
+# judge the resulting SCREENSHOT. Never trust a log line here: a run that tabs
+# too fast lands on a challenges tab, streams the right world and reports LANDED
+# while you stand somewhere else entirely.
+#
+# 300 ms, not 1500 (2026-08-23). Ten presses at 1500 ms was 15 s on every custom
+# map - over a third of the whole boot - and the clamping property above is what
+# makes the wait unnecessary: a press swallowed at 300 ms costs nothing, because
+# the ones after it still land and the strip stops at Locations either way.
+#
+# An earlier attempt at this DID break (see [[skate3-boot-time]]: every map came
+# up in skate.School) and the difference matters. That trim was 170 ms with only
+# THREE presses, so a single swallowed press left the macro on a challenges tab
+# and the confirm started a challenge. The margin, not the delay, was what was
+# missing - and the run was judged by log lines that cannot see which world you
+# are in, so it read as a win.
+#
+# Measured this time by SCREENSHOT, which is the only thing that can tell:
+#   Maloof Money Cup   3/3 MATCH against its confirmed reference (distance 2, 5, 8)
+#   GTA Rot            lands where the 1500 ms macro lands (distance 3; a
+#                      genuinely different map scores 386)
+TAB_PRESSES = int(os.environ.get("SKATE3LOADER_TAB_PRESSES", 10))
+TAB_DELAY_MS = int(os.environ.get("SKATE3LOADER_TAB_DELAY_MS", 300))
 PREFIX = ["start", "a"] + [f"rt:{TAB_DELAY_MS}"] * TAB_PRESSES
 # Step onto the last Locations entry, which is the staged DLC pack.
 #
@@ -108,22 +133,27 @@ PREFIX = ["start", "a"] + [f"rt:{TAB_DELAY_MS}"] * TAB_PRESSES
 # while but the constant never followed, so every boot spent 10.4 s scrolling
 # and thirty-odd presses past the end of a six-row list. Ten keeps a four-press
 # margin for a swallowed input, on the same clamping argument as the tabs.
-CLAMP_PRESSES = 10
+CLAMP_PRESSES = int(os.environ.get("SKATE3LOADER_CLAMP_PRESSES", 8))
 # 260 ms, not less: a synthetic press is held for 8 guest input polls (~130 ms
 # at 60 Hz), so a 130 ms gap means presses run back-to-back with no release
 # between them and the menu swallows some. That produced a cursor short of the
 # end of the list, which selected a stock district instead of the pack.
-CLAMP_DELAY_MS = 260
+CLAMP_DELAY_MS = int(os.environ.get("SKATE3LOADER_CLAMP_DELAY_MS", 260))
 CLAMP = f"down:{CLAMP_DELAY_MS}*{CLAMP_PRESSES}"
 # Open the pack's map list.
-ENTER_PACK = "a:1200"
+ENTER_PACK = f"a:{int(os.environ.get('SKATE3LOADER_ENTER_MS', 600))}"
 # Confirm the highlighted map, then teleport. Without that last press you are
 # left sitting in the menu.
 #
 # The delay after the LAST press buys nothing on the clock - the world load that
 # follows is far longer - but it is what the loading overlay waits on before it
 # starts looking for the streaming dip, so it stays in step with the others.
-CONFIRM = ["a:1200", "a:1500"]
+# 600/800, not 1200/1500. A confirm that outruns the list animation is DROPPED,
+# which leaves you sitting in the menu - a visible, retryable failure, unlike a
+# mistimed tab press, which silently starts a challenge somewhere else. That
+# asymmetry is why these could be trimmed on measurement rather than on faith.
+CONFIRM = [f"a:{int(os.environ.get('SKATE3LOADER_CONFIRM_MS', 600))}",
+           f"a:{int(os.environ.get('SKATE3LOADER_LAST_MS', 800))}"]
 
 # How long to dwell on each step inside the sub-list. The clamp presses can run
 # fast, but a selection press that outruns the list's own animation is dropped.

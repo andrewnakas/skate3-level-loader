@@ -161,6 +161,32 @@ only the first three never actually stopped the substitution.
 
 ---
 
+## How long a map takes
+
+Boot to skating, measured phase by phase with `scripts/boottime.py`:
+
+```
+                    before   now
+host + guest boot     3.0s   3.8s
+press-start           2.4s   2.3s
+boot world load       4.7s   4.6s
+macro settle          2.5s   0.8s
+macro                22.0s   7.6s     <-
+activate              4.6s   5.3s
+TOTAL                40.1s  25.3s
+```
+
+The macro was more than half the wait. Most of it was ten tab presses at 1500 ms
+each, and the tab strip **clamps** on Locations - so the presses are idempotent
+and the long wait bought nothing. 300 ms, verified by screenshot on two maps.
+
+`press-start`, `boot world load` and `activate` are real work; there is no timer
+hiding in them. If a boot is slow on your machine, raise the waits back up:
+
+```bash
+SKATE3LOADER_SETTLE_MS=2500 SKATE3LOADER_TAB_DELAY_MS=1500 ./skate3loader
+```
+
 ## In-game map picker
 
 Press **backtick** (or the **Xbox Guide** button) while skating to switch maps
