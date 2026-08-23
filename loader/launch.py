@@ -229,6 +229,28 @@ def _apply_overrides(argv: list[str], overrides: dict[str, str | None]) -> list[
     return out
 
 
+def advanced_cvars() -> dict[str, str]:
+    """Engine cvars implied by the Advanced panel's saved selection."""
+    from . import settings, strategies
+
+    saved = settings.load()
+    return strategies.cvars_for(saved.get("boot_strategy", "macro"),
+                                saved.get("diagnostics", []))
+
+
+def advanced_timings() -> dict[str, str]:
+    """Menu timings the Advanced panel overrode, as environment variables.
+
+    navigate.py reads these from the environment at import time, so they are
+    applied by putting them in OUR environment before the macro is built - not
+    the game's, which has no idea the macro exists.
+    """
+    from . import settings
+
+    return {name: str(value) for name, value in
+            settings.load().get("timings", {}).items()}
+
+
 def child_env() -> dict[str, str]:
     """The environment the GAME gets, scrubbed of everything the loader needs.
 
@@ -286,6 +308,10 @@ def launch(
     fault is here; if it does not, it is not.
     """
     binary = Path(binary) if binary else config.default_binary()
+    # Whatever the Advanced panel last saved. Experiments live there rather than
+    # in this call's arguments so that the GUI, the CLI and a sweep all get the
+    # same launch.
+    extra_cvars = {**advanced_cvars(), **(extra_cvars or {})}
     if not binary.is_file():
         raise LaunchError(f"game binary not found at {binary}")
 

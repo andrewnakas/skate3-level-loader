@@ -1,0 +1,7 @@
+{
+  "boot_strategy": "macro",
+  "diagnostics": [],
+  "timings": {
+    "SKATE3LOADER_TAB_DELAY_MS": 1500
+  }
+}

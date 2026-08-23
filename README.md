@@ -187,6 +187,30 @@ hiding in them. If a boot is slow on your machine, raise the waits back up:
 SKATE3LOADER_SETTLE_MS=2500 SKATE3LOADER_TAB_DELAY_MS=1500 ./skate3loader
 ```
 
+## Advanced
+
+**Advanced** in the header opens the experiments. Three things live there:
+
+**How a map is reached.** The default drives the pause menu with a timed macro
+and is the only path verified to land the right map. Two alternatives are kept
+switchable rather than deleted, each labelled with what it actually does:
+
+| | |
+|---|---|
+| Standard | ~25 s, 120 sweep runs behind it |
+| Direct boot | skips the frontend states; verified to land, worth ~0.5 s |
+| Engine navigation | known broken - the cursor it steers by never moves |
+
+**Diagnostics.** `Trace DLC content loading` logs every call through the guest's
+content path - the content manager, the driver's mount, each archive added by
+path, each content file opened. This is the tool for a pack that never mounts.
+Both it and direct boot were ported from
+[SK8-Engine](https://github.com/SK8-ENGINE/SK8-Engine) (MIT), a sibling fork of
+the same upstream.
+
+**Menu timings.** The measured defaults, editable. Raise them if a map lands
+somewhere unexpected on a slower machine.
+
 ## In-game map picker
 
 Press **backtick** (or the **Xbox Guide** button) while skating to switch maps

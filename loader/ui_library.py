@@ -110,6 +110,13 @@ class LibraryWindow(Gtk.ApplicationWindow):
         import_button.connect("clicked", self._on_import_clicked)
         header.pack_start(import_button)
 
+        advanced_button = Gtk.Button(label="Advanced")
+        advanced_button.set_tooltip_text(
+            "How a map is reached, what the launch logs, and the menu timings."
+        )
+        advanced_button.connect("clicked", self._on_advanced_clicked)
+        header.pack_end(advanced_button)
+
         self.windowed_toggle = Gtk.CheckButton(label="Windowed")
         self.windowed_toggle.set_tooltip_text(
             "Run the game in a window instead of fullscreen."
@@ -364,6 +371,17 @@ class LibraryWindow(Gtk.ApplicationWindow):
                 detail + ("" if len(failures) == 1 else
                           f"\n\n{len(failures) - 1} other item(s) were skipped too."),
             )
+
+    def _on_advanced_clicked(self, _button) -> None:
+        from . import ui_advanced
+
+        dialog = ui_advanced.AdvancedDialog(self)
+        dialog.run()
+        dialog.destroy()
+        # A changed strategy or timing only takes effect on the NEXT launch, and
+        # saying so beats a user watching an unchanged boot and concluding the
+        # setting did nothing.
+        self.set_status("advanced settings saved - they apply to the next launch")
 
     def _on_locate_clicked(self, _button, pack) -> None:
         """Point a shipped catalog record at this machine's copy of the pack.
