@@ -402,3 +402,11 @@ The loader depends on patches in a `skate3recomp` fork, mainly:
 
 Build with `cmake --build out/build/linux-release --target skate3` — that
 compiles the SDK change and deploys `librexruntime.so` in one step.
+
+---
+
+## Support the project
+
+Really like this software? Feel free to donate to support the project.
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=VN7FLF8AKZR4Y)
