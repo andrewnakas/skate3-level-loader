@@ -114,7 +114,9 @@ jobs:
           # Which python Homebrew built PyGObject against is not ours to guess:
           # a venv on the wrong one cannot see `gi` at all, however many
           # --system-site-packages flags it is given. Ask the formula.
-          GI_DIR="$(brew list pygobject3 | grep -m1 '/gi/__init__.py$')"
+          # awk, not `grep -m1`: grep exits at its first match, brew then dies
+          # of EPIPE writing the rest, and pipefail fails the step with it.
+          GI_DIR="$(brew list pygobject3 | awk '/\/gi\/__init__\.py$/ && !found { print; found = 1 }')"
           PYVER="$(echo "$GI_DIR" | grep -o 'python3\.[0-9]*' | head -1)"
           echo "pygobject3 is built for $PYVER ($GI_DIR)"
           # The interpreter is linked into Homebrew's own bin as python3.X. Do
