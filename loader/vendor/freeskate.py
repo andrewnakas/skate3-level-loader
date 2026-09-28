@@ -200,7 +200,10 @@ def link_override(source: Path, target: Path) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.is_symlink() or target.exists():
         target.unlink()
-    target.symlink_to(source.resolve())
+    # link_file, not symlink_to: this is how the sk83_na_f.xex relaunch alias
+    # gets made, and a bare symlink fails on every Windows machine without
+    # Developer Mode (WinError 1314) before the game even starts.
+    link_file(source.resolve(), target, hard=IS_WINDOWS)
     return 1
 
 
